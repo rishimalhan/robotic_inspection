@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
   rospy
   std_msgs
+  moveit_commander
 )
 
 ## System dependencies are found with CMake's conventions
@@ -106,7 +107,7 @@ catkin_python_setup()
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES planning_tests
- CATKIN_DEPENDS roscpp roslib rospy std_msgs
+ CATKIN_DEPENDS roscpp roslib rospy std_msgs moveit_commander
 #  DEPENDS system_lib
 )
 

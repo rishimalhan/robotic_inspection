@@ -3,6 +3,5 @@
     "python.autoComplete.extraPaths": [
         "/home/rmalhan/robotic_inspection/devel/lib/python3/dist-packages",
         "/opt/ros/noetic/lib/python3/dist-packages"
-    ],
-    "python.languageServer": "Pylance",
+    ]
 }

@@ -1,3 +1,62 @@
 robot_positions:
   home: [0, 0.28, -0.52, 0, 0, 0]
+
+# Collision box
+# position is x, y, z
+# orientation q: x, y, z, w
+collision_boxes:
+  front_floor:
+    name: "front_floor"
+    frame_id: "base_link"
+    position: [1.8, 0.0, 0.5]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [2.0, 2.0, 0.01]
+
+  left_floor:
+    name: "left_floor"
+    frame_id: "base_link"
+    position: [0.0, 1.9, 0.5]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [2.0, 2.0, 0.01]
+
+  right_floor:
+    name: "right_floor"
+    frame_id: "base_link"
+    position: [0.0, -2.0, 0.5]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [2.0, 2.0, 0.01]
+
+  left_wall:
+    name: "left_wall"
+    frame_id: "base_link"
+    position: [0.0, 0.9, 0.0]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [5.0, 0.01, 5.0]
   
+  right_wall:
+    name: "right_wall"
+    frame_id: "base_link"
+    position: [0.0, -1.0, 0.0]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [5.0, 0.01, 5.0]
+
+  ceiling:
+    name: "ceiling"
+    frame_id: "base_link"
+    position: [0.0, 0.0, 1.7]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [5.0, 5.0, 0.01]
+  
+  back_wall:
+    name: "back_wall"
+    frame_id: "base_link"
+    position: [-0.5, 0.0, 0.0]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [0.01, 5.0, 5.0]
+
+  front_wall:
+    name: "front_wall"
+    frame_id: "base_link"
+    position: [1.7, 0.0, 0.0]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    dimension: [0.01, 5.0, 5.0]

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>camera_calibration</name>
+  <name>camera_localization</name>
   <version>0.0.0</version>
-  <description>The camera_calibration package</description>
+  <description>The camera_localization package</description>
 
   <maintainer email="rmalhan@todo.todo">rmalhan</maintainer>
 

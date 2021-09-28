@@ -3,7 +3,6 @@ project(system)
 
 find_package(
     catkin REQUIRED
-    utilities
     )
 
 catkin_python_setup()

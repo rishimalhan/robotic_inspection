@@ -1,0 +1,41 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/rmalhan/robotic_inspection/devel/include/**",
+                "/opt/ros/noetic/include/**",
+                "/home/rmalhan/robotic_inspection/src/abb_driver/include/**",
+                "/home/rmalhan/robotic_inspection/src/camera_calibration/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_planners/chomp/chomp_motion_planner/include/**",
+                "/home/rmalhan/robotic_inspection/src/geometric_shapes/include/**",
+                "/home/rmalhan/robotic_inspection/src/industrial_core/industrial_robot_client/include/**",
+                "/home/rmalhan/robotic_inspection/src/industrial_core/industrial_trajectory_filters/include/**",
+                "/home/rmalhan/robotic_inspection/src/industrial_core/industrial_utils/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_planners/chomp/chomp_interface/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit_resources/prbt_ikfast_manipulator_plugin/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_ros/benchmarks/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_plugins/moveit_ros_control_interface/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_ros/move_group/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_ros/occupancy_map_monitor/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_ros/robot_interaction/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_ros/moveit_servo/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_setup_assistant/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_plugins/moveit_simple_controller_manager/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit_visual_tools/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_planners/pilz_industrial_motion_planner/include/**",
+                "/home/rmalhan/robotic_inspection/src/moveit/moveit_planners/pilz_industrial_motion_planner_testutils/include/**",
+                "/home/rmalhan/robotic_inspection/src/planning_tests/include/**",
+                "/home/rmalhan/robotic_inspection/src/rviz_visual_tools/include/**",
+                "/home/rmalhan/robotic_inspection/src/industrial_core/simple_message/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "compileCommands": "${workspaceFolder}/build/rviz_visual_tools/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

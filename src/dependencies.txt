@@ -1,0 +1,3 @@
+Install ROS-noetic
+sudo apt install ros-noetic-moveit
+sudo apt-get install ros-noetic-trac-ik-kinematics-plugin

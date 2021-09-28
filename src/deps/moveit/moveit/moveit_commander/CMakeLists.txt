@@ -9,6 +9,6 @@ catkin_package()
 
 catkin_install_python(
   PROGRAMS bin/${PROJECT_NAME}_cmdline.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 add_subdirectory(test)

@@ -21,39 +21,21 @@ def main():
         moveit_msgs.msg.DisplayTrajectory,
         queue_size=20,
     )
+    
+    # We get the joint values from the group and change some of the values:
+    joint_goal = move_group.get_current_joint_values()
+    joint_goal[0] = 0
+    joint_goal[1] = -1 / 8
+    joint_goal[2] = 0
+    joint_goal[3] = -1 / 4
+    joint_goal[4] = 0
+    joint_goal[5] = 1 / 6  # 1/6 of a turn
 
-    home_config = JointState()
-    home_config.position = numpy.radians([0,-16,-30,0,60,0])
-    (flag, trajectory, planning_time, err_code) = move_group.plan(home_config)
-    print("Trajectory planning to home status: ", flag)
-    print(trajectory)
-    move_group.execute(trajectory, wait=True)
-    move_group.stop()
+    # The go command can be called with joint values, poses, or without any
+    # parameters if you have already set the pose or joint target for the group
+    move_group.go(joint_goal, wait=True)
 
-    # print("Preplanned config: ", move_group.get_current_joint_values())
-    # current_config = move_group.get_current_joint_values()
-    # goal_config = JointState()
-    # goal_config.position = current_config + [0.1,0.1,-0.2,-0.2,0,0]
-    # (flag, trajectory, planning_time, err_code) = move_group.plan(goal_config)
-    # move_group.execute(trajectory, wait=True)
-    # move_group.stop()
-    # print("Postplanned config: ", move_group.get_current_joint_values())
-
-    wpose = move_group.get_current_pose().pose
-    waypoints = []
-    for i in range(10):
-        wpose.position.y += (i+1)*0.01
-        waypoints.append( wpose )
-
-    (path, fraction) = move_group.compute_cartesian_path(
-                                    waypoints,
-                                    eef_step=0.001,
-                                    jump_threshold=0.05,
-                                    avoid_collisions=True,
-                                    path_constraints=None,
-                                )
-    print("Fraction of path feasible: ",fraction)
-    move_group.execute(path, wait=True)
+    # Calling ``stop()`` ensures that there is no residual movement
     move_group.stop()
 
 

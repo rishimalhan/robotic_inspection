@@ -1,5 +1,5 @@
 robot_positions:
-  home: [0, 0.28, -0.52, 0, 0, 0]
+  home: [0, -0.31, 0.52, 0, 1.22, 0]
 
 # Collision box
 # position is x, y, z

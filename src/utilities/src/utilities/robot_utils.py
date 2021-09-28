@@ -17,6 +17,8 @@ logger = logging.getLogger('rosout')
 
 class InspectionBot:
     def __init__(self, add_collision_obstacles=True):
+        self.goal_position = JointState()
+        self.goal_position.name = ["joint_"+str(i+1) for i in range(6)]
         self.group_name = "manipulator"
         self.robot = RobotCommander()
         self.scene = PlanningSceneInterface(synchronous=True)
@@ -56,8 +58,30 @@ class InspectionBot:
                     logger.info("Collision object {0} added".format(key))
                 else:
                     raise Exception("Unable to add collision object: ", key)
+            logger.info("All collision objects added")
         return
 
     def wrap_up(self):
         self.scene.clear()
         rospy.sleep(0.1)
+    
+    def execute(self):
+        (error_flag, plan, planning_time, error_code) = self.move_group.plan( self.goal_position )
+        if error_flag:
+            logger.info("Planning to home position successful. Planning time: {0} s. Executing trajectory"
+                                .format(planning_time))
+        else:
+            logger.warning(error_code)
+            return
+        self.move_group.execute( plan,wait=True )
+        self.move_group.stop()
+        self.move_group.execute( plan,wait=True )
+        self.move_group.stop()
+        return plan
+
+    def execute_and_simulate(self):
+        plan = self.execute()
+        display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+        display_trajectory.trajectory_start = self.robot.get_current_state()
+        display_trajectory.trajectory.append(plan)
+        self.traj_viz.publish(display_trajectory)

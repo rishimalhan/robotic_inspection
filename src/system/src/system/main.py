@@ -9,17 +9,15 @@ from rospy.core import is_shutdown
 from utilities.filesystem_utils import load_yaml
 from utilities.robot_utils import InspectionBot
 from camera_localization.bootstrap_camera import bootstrap_camera
+from camera_localization.camera_localization import camera_localization
 
 logger = logging.getLogger('rosout')
 
-def bootstrap_system(sim=False):
+def bootstrap_system():
     # Bootstrap the robot parameters
     load_yaml("utilities","system")
     bootstrap_camera()
     inspection_bot = InspectionBot()
-    if sim:
-        inspection_bot.traj_viz = rospy.Publisher("/move_group/display_planned_path",
-                                        moveit_msgs.msg.DisplayTrajectory,queue_size=10)
     return inspection_bot
     
 def run_localization(inspection_bot):
@@ -34,19 +32,27 @@ def run_localization(inspection_bot):
         logger.warning("Robot is not at home position. Euclidean distance: {0}. \
                     Moving the robot to home position".format(config_distance))
         inspection_bot.goal_position.position = home_config
-        inspection_bot.execute_and_simulate()
+        inspection_bot.execute()
 
     # Plan from home to image_capture node
+    logger.info("Moving to image capture node for camera localization")
     inspection_bot.goal_position.position = image_capture
-    inspection_bot.execute_and_simulate()
+    inspection_bot.execute()
+
+    # Assuming we are at Aruco node since execute command involves stop
+    base_T_camera = camera_localization()
 
     # Plan from image_capture node to home
+    logger.info("Moving back to home")
     inspection_bot.goal_position.position = home_config
-    inspection_bot.execute_and_simulate()
+    inspection_bot.execute()
+
+    return base_T_camera
 
 if __name__=='__main__':
     rospy.init_node("main")
-    inspection_bot = bootstrap_system(sim=True)
-    run_localization(inspection_bot)
-    rospy.sleep(2)
+    inspection_bot = bootstrap_system()
+    # If we want to run_localization again
+    base_T_camera = run_localization(inspection_bot)
+    # Else retrieve old stored transformation
     inspection_bot.wrap_up()

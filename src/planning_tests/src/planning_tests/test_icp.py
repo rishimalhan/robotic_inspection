@@ -8,6 +8,8 @@ from utilities.filesystem_utils import get_pkg_path
 def main():
     path = get_pkg_path("system")
     pcd = open3d.io.read_point_cloud(path + "/pointclouds/calibration_reference.ply")
+    import IPython
+    IPython.embed()
     # print(pcd)
     # print(numpy.asarray(pcd.points))
     # open3d.visualization.draw_geometries([pcd],

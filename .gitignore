@@ -3,4 +3,4 @@ devel/
 logs/
 .catkin_tools/
 .vscode/
-.ply
+*.ply

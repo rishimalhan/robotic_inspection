@@ -1,3 +1,5 @@
 Install ROS-noetic
 sudo apt install ros-noetic-moveit
 sudo apt-get install ros-noetic-trac-ik-kinematics-plugin
+pip3 install numpy==1.18.0
+pip3 install open3d

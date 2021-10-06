@@ -6,19 +6,12 @@ import numpy
 import logging
 import moveit_msgs
 from rospy.core import is_shutdown
-from utilities.filesystem_utils import load_yaml
-from utilities.robot_utils import InspectionBot
-from camera_localization.bootstrap_camera import bootstrap_camera
+from utilities.robot_utils import (
+    bootstrap_system
+)
 from camera_localization.camera_localization import camera_localization
 
 logger = logging.getLogger('rosout')
-
-def bootstrap_system():
-    # Bootstrap the robot parameters
-    load_yaml("utilities","system")
-    bootstrap_camera()
-    inspection_bot = InspectionBot()
-    return inspection_bot
     
 def run_localization(inspection_bot):
     # Run the process of localizing the camera with respect to the robot end-effector
@@ -51,8 +44,9 @@ def run_localization(inspection_bot):
 
 if __name__=='__main__':
     rospy.init_node("main")
-    inspection_bot = bootstrap_system()
-    # If we want to run_localization again
-    base_T_camera = run_localization(inspection_bot)
+    inspection_bot = bootstrap_system(sim_camera=True)
+    
     # Else retrieve old stored transformation
+
+    # Prepare for shut down
     inspection_bot.wrap_up()

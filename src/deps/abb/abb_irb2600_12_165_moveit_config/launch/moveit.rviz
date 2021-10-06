@@ -1,12 +1,13 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 84
+    Help Height: 0
     Name: Displays
     Property Tree Widget:
       Expanded:
         - /MotionPlanning1
+        - /TF1/Frames1
       Splitter Ratio: 0.5170649886131287
-    Tree Height: 301
+    Tree Height: 320
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -75,6 +76,16 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
           base_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          camera_base:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          camera_mount:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -171,6 +182,16 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
+          camera_base:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          camera_mount:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
           flange:
             Alpha: 1
             Show Axes: false
@@ -214,6 +235,144 @@ Visualization Manager:
         Show Robot Visual: true
       Value: true
       Velocity_Scaling_Factor: 0.1
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        camera_base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        camera_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: Camera
+      Robot Description: camera
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: stl
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.0010000000474974513
+      Style: Spheres
+      Topic: stl_cloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+        base:
+          Value: false
+        base_link:
+          Value: true
+        camera_base:
+          Value: false
+        camera_depth_frame:
+          Value: true
+        camera_mount:
+          Value: false
+        flange:
+          Value: false
+        link_1:
+          Value: false
+        link_2:
+          Value: false
+        link_3:
+          Value: false
+        link_4:
+          Value: false
+        link_5:
+          Value: false
+        link_6:
+          Value: false
+        tool0:
+          Value: true
+      Marker Alpha: 1
+      Marker Scale: 0.20000000298023224
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        base_link:
+          base:
+            {}
+          link_1:
+            link_2:
+              link_3:
+                link_4:
+                  link_5:
+                    link_6:
+                      flange:
+                        tool0:
+                          camera_depth_frame:
+                            {}
+                          camera_mount:
+                            camera_base:
+                              {}
+      Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 114; 159; 207
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: visible_cloud
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.004999999888241291
+      Style: Spheres
+      Topic: visible_cloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -230,7 +389,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.144890785217285
+      Distance: 1.3683351278305054
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -238,22 +397,22 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.3765600025653839
-        Y: -0.06697940081357956
-        Z: 2.2351800055275817e-07
+        X: 0.6135414242744446
+        Y: 0.06516110897064209
+        Z: 4.0233192066807533e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.37479719519615173
+      Pitch: 0.5797980427742004
       Target Frame: base_link
-      Yaw: 0.5517623424530029
+      Yaw: 0.55359947681427
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1016
+  Height: 1043
   Help:
     collapsed: false
   Hide Left Dock: false
@@ -262,9 +421,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000026a0000039efc0200000008fb000000100044006900730070006c006100790073010000003d000001be000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000003b0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e0067010000020f000001d60000000000000000fb0000002e004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d00200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000201000001da0000017d00fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016000004c80000039e00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000026a000003b9fc0200000008fb000000100044006900730070006c006100790073010000003d0000017d000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a0056006900650077007300000003b0000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e0067010000020f000001d60000000000000000fb0000002e004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d00200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000001c0000002360000017d00fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff000000160000001600000510000003b900000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1848
-  X: 72
-  Y: 27
+  Width: 1920
+  X: 1920
+  Y: 0

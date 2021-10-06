@@ -4,6 +4,8 @@ import rospy
 import moveit_msgs
 from moveit_commander.robot import RobotCommander
 from moveit_commander.planning_scene_interface import PlanningSceneInterface
+from camera_localization.bootstrap_camera import bootstrap_camera
+from utilities.filesystem_utils import load_yaml
 from moveit_commander.move_group import MoveGroupCommander
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import( 
@@ -12,6 +14,7 @@ from geometry_msgs.msg import(
 )
 import numpy
 import logging
+from tf.transformations import quaternion_matrix
 
 logger = logging.getLogger('rosout')
 
@@ -78,3 +81,18 @@ class InspectionBot:
         self.move_group.execute( plan,wait=True )
         self.move_group.stop()
         return plan
+    
+    def get_forward_kinematics(self):
+        current_pose = self.move_group.get_current_pose().pose
+        forward_kinematics = quaternion_matrix([current_pose.orientation.w, current_pose.orientation.x, 
+                                        current_pose.orientation.y, current_pose.orientation.z])
+        forward_kinematics[0:3,3] = [current_pose.position.x, current_pose.position.y, current_pose.position.z]
+        return numpy.array(forward_kinematics)
+
+
+def bootstrap_system(sim_camera=False):
+    # Bootstrap the robot parameters
+    load_yaml("system", "system")
+    bootstrap_camera()
+    inspection_bot = InspectionBot()
+    return inspection_bot

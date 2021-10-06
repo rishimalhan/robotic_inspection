@@ -54,14 +54,14 @@
     <arg name="moveit_warehouse_database_path" value="$(arg db_path)"/>
     </include>
     
-
-    <!-- Plot the camera mount -->
-    <param name="camera_mount" command="$(find xacro)/xacro $(find system)/database/camera_mount.xacro"/>
-    <node pkg="robot_state_publisher" type="robot_state_publisher" name="tool_publ">
-        <remap from="robot_description" to="rob_tool" />
+    <!-- Plot the camera
+    <param name="camera" command="$(find xacro)/xacro $(find system)/database/camera.xacro"/>
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="camera_publisher">
+        <remap from="robot_description" to="camera" />
     </node>
-    <node pkg="tf" name="rob_T_tool" type="static_transform_publisher" args=" 0 0 0 0 0 0 /tool0 /tool_origin 30"/>
+    <node pkg="tf" name="camera_plot" type="static_transform_publisher" args=" 0 0 0 0 0 0 /tool0 /camera_mount 30"/> -->
 
-    <!-- Plot the TCPs -->
-    <node pkg="tf" name="tcp1" type="static_transform_publisher" args=" 0 -0.215 0.2155 0 0 0 /tool0 /tcp1 30"/>
+    <!-- Camera frame TF used for computations -->
+    <node pkg="tf" name="ff_T_camera" type="static_transform_publisher" 
+                                args="-0.0145 0.0186 0.0385 0 -1.57 0 /tool0 /camera_depth_frame 30"/>
 </launch>

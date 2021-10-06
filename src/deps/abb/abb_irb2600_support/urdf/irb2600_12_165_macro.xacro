@@ -179,5 +179,43 @@
       <parent link="${prefix}flange" />
       <child link="${prefix}tool0" />
     </joint>
+
+    <!-- Camera -->
+    <link name="camera_mount">
+    <visual>
+        <geometry>
+            <mesh filename="package://system/database/meshes/camera_mount.stl"
+                scale="1 1 1"/>
+        </geometry>
+        <material name="ABS" >
+            <color rgba="0.5 0.5 0.5 1.0" />
+            </material> 	
+        </visual>
+    </link>
+    
+    <link name="camera_base">
+    <visual>
+        <geometry>
+            <mesh filename="package://system/database/meshes/d415.stl"
+                scale="1 1 1"/>
+        </geometry>
+        <material name="ABS" >
+            <color rgba="0.5 0.5 0.5 1.0" />
+            </material> 	
+        </visual>
+    </link>
+
+    <joint type="fixed" name="mount_joint">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="${prefix}tool0"/>
+        <child link="camera_mount"/>
+    </joint>
+
+    <joint type="fixed" name="camera_joint">
+        <origin xyz="-0.0145 0 0.0385" rpy="0 0 1.57"/>
+        <parent link="camera_mount"/>
+        <child link="camera_base"/>
+    </joint>
+
   </xacro:macro>
 </robot>

@@ -1,6 +1,12 @@
 robot_positions:
   home: [0, -0.31, 0.52, 0, 1.22, 0]
 
+stl_params:
+  name: "composite_mold"
+  directory_path: "/database/meshes"
+  transform: [ 0.8, 0.0, 0.5, 0.0, 0.0, 0.0 ] # xyzrpy
+  color: [0.5, 0.5, 0.5]
+
 # Collision box
 # position is x, y, z
 # orientation q: x, y, z, w

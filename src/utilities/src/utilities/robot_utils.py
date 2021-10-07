@@ -82,10 +82,10 @@ class InspectionBot:
         self.move_group.stop()
         return plan
     
-    def get_forward_kinematics(self):
+    def get_current_forward_kinematics(self):
         current_pose = self.move_group.get_current_pose().pose
-        forward_kinematics = quaternion_matrix([current_pose.orientation.w, current_pose.orientation.x, 
-                                        current_pose.orientation.y, current_pose.orientation.z])
+        forward_kinematics = quaternion_matrix([current_pose.orientation.x, current_pose.orientation.y,
+                                        current_pose.orientation.z, current_pose.orientation.w])
         forward_kinematics[0:3,3] = [current_pose.position.x, current_pose.position.y, current_pose.position.z]
         return numpy.array(forward_kinematics)
 

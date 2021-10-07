@@ -29,9 +29,11 @@ def main():
     inspection_bot.execute()
     inspection_bot.goal_position.position = cloud_capture_config_1
     inspection_bot.execute()
-    rospy.sleep(2)
+    rospy.sleep(0.5)
     inspection_bot.goal_position.position = cloud_capture_config_2
     inspection_bot.execute()
+
+    # sim_camera.get_vision_coordinates()
     # rospy.signal_shutdown("Task complete")
 
 

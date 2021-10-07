@@ -236,32 +236,6 @@ Visualization Manager:
       Value: true
       Velocity_Scaling_Factor: 0.1
     - Alpha: 1
-      Class: rviz/RobotModel
-      Collision Enabled: false
-      Enabled: true
-      Links:
-        All Links Enabled: true
-        Expand Joint Details: false
-        Expand Link Details: false
-        Expand Tree: false
-        Link Tree Style: Links in Alphabetic Order
-        camera_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_mount:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-      Name: Camera
-      Robot Description: camera
-      TF Prefix: ""
-      Update Interval: 0
-      Value: true
-      Visual Enabled: true
-    - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
         Max Value: 10
@@ -295,9 +269,9 @@ Visualization Manager:
       Frames:
         All Enabled: false
         base:
-          Value: false
-        base_link:
           Value: true
+        base_link:
+          Value: false
         camera_base:
           Value: false
         camera_depth_frame:
@@ -389,7 +363,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.4114737510681152
+      Distance: 2.973327875137329
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -405,9 +379,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4747981131076813
+      Pitch: 0.554797887802124
       Target Frame: base_link
-      Yaw: 0.6685993671417236
+      Yaw: 0.6385998725891113
     Saved: ~
 Window Geometry:
   Displays:

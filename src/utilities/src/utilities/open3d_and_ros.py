@@ -15,8 +15,8 @@ FIELDS_XYZ = [
     PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
     PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
 ]
-FIELDS_XYZRGBA = FIELDS_XYZ + \
-    [PointField(name='rgba', offset=12, datatype=PointField.UINT32, count=1)]
+FIELDS_XYZRGB = FIELDS_XYZ + \
+    [PointField(name='rgb', offset=12, datatype=PointField.UINT32, count=1)]
 
 # Bit operations
 BIT_MOVE_16 = 2**16
@@ -42,7 +42,7 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
         cloud_data=points
     else: # XYZ + RGB
         colors=np.asarray(open3d_cloud.colors)
-        fields=FIELDS_XYZRGBA
+        fields=FIELDS_XYZRGB
         # -- Change rgb color from "three float" to "one 24-byte int"
         # 0x00FFFFFF is white, 0x00000000 is black.
         # colors = np.floor(np.asarray(open3d_cloud.colors)*255) # nx3 matrix
@@ -50,9 +50,10 @@ def convertCloudFromOpen3dToRos(open3d_cloud, frame_id="odom"):
         # cloud_data=np.c_[points, colors]
         cloud_data = []
         for i in range(points.shape[0]):
-            rgba = struct.unpack('I', struct.pack('BBBB', int(colors[i,2]*255),
-                             int(colors[i,1]*255), int(colors[i,0]*255), int(1)))[0]
-            cloud_data.append( [points[i,0],points[i,1],points[i,2], rgba] )
+            # rgba = struct.unpack('I', struct.pack('BBBB', int(colors[i,2]*255),
+            #                  int(colors[i,1]*255), int(colors[i,0]*255), int(1)))[0]
+            rgb = int(colors[i,0]*255) * BIT_MOVE_16 + int(colors[i,1]*255) * BIT_MOVE_8 + int(colors[i,2]*255)
+            cloud_data.append( [points[i,0],points[i,1],points[i,2], rgb] )
     # create ros_cloud
     return pc2.create_cloud(header, fields, cloud_data)
 

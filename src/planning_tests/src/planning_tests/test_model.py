@@ -25,15 +25,14 @@ def main():
     cloud_capture_config_1 = [0.19, 0, 0.61, 0, 0.87, 0] # Tied to stl_params transform
     cloud_capture_config_2 = [0.1, 0.19, 0.45, 0, 0.87, 0] # Tied to stl_params transform
 
-    inspection_bot.goal_position.position = home_config
-    inspection_bot.execute()
+    # inspection_bot.goal_position.position = home_config
+    # inspection_bot.execute()
     inspection_bot.goal_position.position = cloud_capture_config_1
     inspection_bot.execute()
-    rospy.sleep(0.5)
-    inspection_bot.goal_position.position = cloud_capture_config_2
-    inspection_bot.execute()
-
-    # sim_camera.get_vision_coordinates()
+    # rospy.sleep(0.5)
+    # inspection_bot.goal_position.position = cloud_capture_config_2
+    # inspection_bot.execute()
+    
     # rospy.signal_shutdown("Task complete")
 
 

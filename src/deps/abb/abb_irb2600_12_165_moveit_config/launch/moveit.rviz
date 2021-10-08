@@ -331,7 +331,7 @@ Visualization Manager:
       Color: 114; 159; 207
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -343,6 +343,34 @@ Visualization Manager:
       Size (m): 0.004999999888241291
       Style: Spheres
       Topic: visible_cloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 0.5068137049674988
+        Min Value: 0.4112463891506195
+        Value: true
+      Axis: Z
+      Channel Name: rgba
+      Class: rviz/PointCloud2
+      Color: 114; 159; 207
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: point_accuracy
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.003000000026077032
+      Style: Spheres
+      Topic: point_accuracy
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -363,7 +391,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.973327875137329
+      Distance: 2.678990602493286
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -371,17 +399,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.5034934878349304
-        Y: 0.07028645277023315
-        Z: 4.0233192066807533e-07
+        X: 0.39393413066864014
+        Y: -0.20069310069084167
+        Z: 3.427272758926847e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.554797887802124
+      Pitch: 0.43479758501052856
       Target Frame: base_link
-      Yaw: 0.6385998725891113
+      Yaw: 0.7685957551002502
     Saved: ~
 Window Geometry:
   Displays:

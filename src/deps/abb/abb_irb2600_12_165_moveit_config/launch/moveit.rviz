@@ -4,7 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /MotionPlanning1
+        - /MotionPlanning1/Scene Robot1/Links1
         - /TF1/Frames1
       Splitter Ratio: 0.5170649886131287
     Tree Height: 320
@@ -132,7 +132,7 @@ Visualization Manager:
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
         Show Robot Collision: false
-        Show Robot Visual: true
+        Show Robot Visual: false
         Show Trail: false
         State Display Time: 0.05 s
         Trail Step Size: 1
@@ -264,36 +264,10 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base:
-          Value: true
-        base_link:
-          Value: false
-        camera_base:
-          Value: false
-        camera_depth_frame:
-          Value: true
-        camera_mount:
-          Value: false
-        flange:
-          Value: false
-        link_1:
-          Value: false
-        link_2:
-          Value: false
-        link_3:
-          Value: false
-        link_4:
-          Value: false
-        link_5:
-          Value: false
-        link_6:
-          Value: false
-        tool0:
-          Value: true
       Marker Alpha: 1
       Marker Scale: 0.20000000298023224
       Name: TF
@@ -301,24 +275,9 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_link:
-          base:
-            {}
-          link_1:
-            link_2:
-              link_3:
-                link_4:
-                  link_5:
-                    link_6:
-                      flange:
-                        tool0:
-                          camera_depth_frame:
-                            {}
-                          camera_mount:
-                            camera_base:
-                              {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -329,9 +288,9 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 114; 159; 207
-      Color Transformer: FlatColor
+      Color Transformer: RGB8
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -343,34 +302,6 @@ Visualization Manager:
       Size (m): 0.004999999888241291
       Style: Spheres
       Topic: visible_cloud
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 0.5068137049674988
-        Min Value: 0.4112463891506195
-        Value: true
-      Axis: Z
-      Channel Name: rgba
-      Class: rviz/PointCloud2
-      Color: 114; 159; 207
-      Color Transformer: RGB8
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Min Color: 0; 0; 0
-      Name: point_accuracy
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.003000000026077032
-      Style: Spheres
-      Topic: point_accuracy
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -391,7 +322,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.678990602493286
+      Distance: 2.4920103549957275
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -399,17 +330,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.39393413066864014
-        Y: -0.20069310069084167
-        Z: 3.427272758926847e-07
+        X: 0.4173494577407837
+        Y: 0.08937239646911621
+        Z: 9.983783684219816e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.43479758501052856
+      Pitch: 0.6197976469993591
       Target Frame: base_link
-      Yaw: 0.7685957551002502
+      Yaw: 0.5835979580879211
     Saved: ~
 Window Geometry:
   Displays:

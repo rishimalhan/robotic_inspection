@@ -4,7 +4,6 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /MotionPlanning1/Scene Robot1/Links1
         - /TF1/Frames1
       Splitter Ratio: 0.5170649886131287
     Tree Height: 320
@@ -299,7 +298,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.004999999888241291
+      Size (m): 0.003000000026077032
       Style: Spheres
       Topic: visible_cloud
       Unreliable: false
@@ -322,7 +321,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.4920103549957275
+      Distance: 2.5584208965301514
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -330,17 +329,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.4173494577407837
-        Y: 0.08937239646911621
-        Z: 9.983783684219816e-07
+        X: 0.32339608669281006
+        Y: -0.01660621166229248
+        Z: 1.1175876579727628e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6197976469993591
+      Pitch: 0.594797670841217
       Target Frame: base_link
-      Yaw: 0.5835979580879211
+      Yaw: 0.6485978960990906
     Saved: ~
 Window Geometry:
   Displays:

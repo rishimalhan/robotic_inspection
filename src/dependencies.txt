@@ -3,3 +3,10 @@ sudo apt install ros-noetic-moveit
 sudo apt-get install ros-noetic-trac-ik-kinematics-plugin
 pip3 install numpy==1.18.0
 pip3 install open3d
+pip3 install gym
+sudo apt-get update && sudo apt-get install cmake libopenmpi-dev python3-dev zlib1g-dev
+pip3 install tensorflow-gpu==2.2.0
+
+git clone https://github.com/openai/baselines.git
+cd baselines
+pip3 install -e .

@@ -17,12 +17,27 @@ from system.perception_utils import (
 )
 logger = logging.getLogger("rosout")
 
+class CameraModel:
+    def __init__(self):
+        self.z_sigma = 0.0 # Error 0.0 +- 3*sigma in meters
+        self.accuracy_sigma = 0.003
+        self.clearing_distance = 0.15
+        self.max_distance = 0.3
+
+    def predict(self,vision_parameters):
+        # We multiply error by z_sigma to bring it to max 1 cm. Error is max 1.0 before that
+        return (numpy.mean( numpy.column_stack(
+                    (31.1*numpy.power(vision_parameters[:,0],2) - 9.33*vision_parameters[:,0] + 1.0,
+                    0.3*numpy.exp(4.01*vision_parameters[:,1]),
+                    0.3*numpy.exp(0.38*vision_parameters[:,2]))
+                ),
+                axis=1 ), numpy.ones(vision_parameters.shape[0],) * self.accuracy_sigma )
 
 class SimCamera:
     def __init__(self, inspection_bot, part_stl_path=None, num_sample_points=20000):
-        self.overlay_accuracy_map = True
+        self.camera_model = CameraModel()
+        self.overlay_error_map = True
         self.transformer = tf.TransformListener(True, rospy.Duration(10.0))
-        self.noise_stddev = numpy.array([ 0.0, 0.0, 0.001 ])*0.0 # xyz error in m
         self.latest_cloud = None
         self.default_mesh = None
         self.part_stl_path = part_stl_path
@@ -57,16 +72,13 @@ class SimCamera:
         # -- Convert open3d_cloud to ros_cloud, and publish. Until the subscribe receives it.
         while not self.stl_cloud.is_empty() and not rospy.is_shutdown():
             self.stl_cloud_pub.publish(convertCloudFromOpen3dToRos(self.stl_cloud, frame_id="base"))
-            if self.overlay_accuracy_map:
-                (visible_cloud, base_T_camera) = self.capture_point_cloud()
-                heatmap = get_heatmap(visible_cloud, base_T_camera)
-            else:
-                (visible_cloud,_) = self.capture_point_cloud()
-            if not visible_cloud.is_empty() and self.overlay_accuracy_map:
-                if heatmap is not None:
+            (visible_cloud, base_T_camera) = self.capture_point_cloud()
+            if not visible_cloud.is_empty():
+                if self.overlay_error_map:
+                    (heatmap,stddev) = get_heatmap(visible_cloud, base_T_camera, self.camera_model)
                     from matplotlib import cm
                     try:
-                        colormap = cm.Spectral( numpy.subtract(heatmap,numpy.min(heatmap))/(numpy.max(heatmap-numpy.min(heatmap))))
+                        colormap = cm.jet( numpy.subtract(heatmap,numpy.min(heatmap))/(numpy.max(heatmap-numpy.min(heatmap))))
                         visible_cloud.colors = open3d.utility.Vector3dVector( colormap[:,0:3] )
                     except:
                         logger.warn("Heat map failed to generate.")
@@ -92,13 +104,14 @@ class SimCamera:
                 knn_point_vectors /= numpy.linalg.norm(knn_point_vectors,axis=1)[:,None]
                 visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,0] )>=0.9)[0],:]
                 if visible_points.shape[0]>0:
-                    visible_cloud.points = open3d.utility.Vector3dVector( visible_points + 
-                                            numpy.random.normal(0, 1.0, (visible_points.shape[0],3))*self.noise_stddev )
+                    visible_points[:,2] += numpy.random.normal(0.0, 1.0, 
+                                            (visible_points.shape[0],))*self.camera_model.z_sigma
+                    visible_cloud.points = open3d.utility.Vector3dVector( visible_points )
                     visible_cloud.estimate_normals()
                     visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
                     visible_cloud.normalize_normals()
                     visible_cloud.colors = open3d.utility.Vector3dVector( 
-                                            numpy.ones((visible_points.shape[0],3))*[0.447,0.62,0.811])
+                                            numpy.ones(visible_points.shape)*[0.447,0.62,0.811])
                 return (visible_cloud,base_T_camera)
         return (self.empty_cloud,None)
 

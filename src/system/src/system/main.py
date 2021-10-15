@@ -7,7 +7,10 @@ import logging
 import rosparam
 import moveit_msgs
 from rospy.core import is_shutdown
-from planning_utils import generate_path_on_cloud
+from planning_utils import (
+    generate_waypoints_on_cloud,
+    generate_state_space
+)
 from utilities.robot_utils import (
     bootstrap_system
 )
@@ -17,7 +20,10 @@ from utilities.filesystem_utils import (
     load_yaml
 )
 from simulated_camera.simulated_camera import SimCamera
-
+from system.perception_utils import (
+    get_error_state
+)
+from utilities.visualizer import Visualizer
 logger = logging.getLogger('rosout')
     
 def run_localization(inspection_bot):
@@ -57,7 +63,7 @@ def start_simulated_camera(inspection_bot):
     sim_camera.publish_cloud()
     return sim_camera
 
-if __name__=='__main__':
+def main():
     rospy.init_node("main")
     inspection_bot = bootstrap_system()
     home_config = rospy.get_param("/robot_positions/home")
@@ -71,8 +77,22 @@ if __name__=='__main__':
         inspection_bot.execute(inspection_bot.get_joint_state(home_config))
     
     sim_camera = start_simulated_camera(inspection_bot)
-    path = generate_path_on_cloud(sim_camera.stl_cloud, sim_camera.transformer, inspection_bot.get_pose)
-    inspection_bot.execute_cartesian_path(path)
-        
+    states = generate_state_space(sim_camera.stl_cloud)
+
+    # viz = Visualizer()
+    # viz.axes = states
+    # viz.start_visualizer()
+
+    # states = generate_waypoints_on_cloud(sim_camera.stl_cloud, sim_camera.transformer, inspection_bot.get_pose)
+    # inspection_bot.execute_cartesian_path(path)
+    # inspection_bot.execute(path[0])
+
+    # (cloud,transform) = sim_camera.capture_point_cloud()
+    # (point_error, normal_error) = get_error_state(cloud, transform,model=sim_camera.camera_model)
+    # print(point_error)
+
     inspection_bot.wrap_up()
+
+if __name__=='__main__':
+    main()
     rospy.signal_shutdown("Task complete")

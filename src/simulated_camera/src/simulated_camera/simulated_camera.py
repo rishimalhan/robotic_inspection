@@ -12,6 +12,7 @@ import copy
 from sensor_msgs.msg import PointCloud2
 from tf.transformations import quaternion_matrix
 from utilities.open3d_and_ros import convertCloudFromOpen3dToRos
+from utilities.voxel_grid import VoxelGrid
 from system.perception_utils import (
     get_heatmap
 )
@@ -61,6 +62,9 @@ class SimCamera:
             self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
             logger.info("PointCloud Generated")
             self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
+        self.max_bounds = numpy.hstack(( self.stl_cloud.get_max_bound(), [0.8,0.8,0.8] ))
+        self.min_bounds = numpy.hstack(( self.stl_cloud.get_min_bound(), [-0.8,-0.8,-0.8] ))
+        self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [self.min_bounds, self.max_bounds])
 
     def publish_cloud(self):
         self.stl_cloud_pub = rospy.Publisher("stl_cloud", PointCloud2, queue_size=1)
@@ -85,16 +89,20 @@ class SimCamera:
                         visible_cloud.clear()
                 self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(visible_cloud, frame_id="base"))
             rospy.sleep(0.1)
-        
-    def capture_point_cloud(self, fit_kdtree=False):
+
+    def get_current_transform(self):
+        base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
+        tool0_T_camera_vec = self.transformer.lookupTransform("tool0", "camera_depth_frame", rospy.Time(0))
+        tool0_T_camera = quaternion_matrix( [tool0_T_camera_vec[1][0], tool0_T_camera_vec[1][1],
+                                            tool0_T_camera_vec[1][2], tool0_T_camera_vec[1][3]] )
+        tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
+        return numpy.matmul(base_T_tool0,tool0_T_camera)
+
+    def capture_point_cloud(self, base_T_camera=None):
         if self.part_stl_path:
             visible_cloud = open3d.geometry.PointCloud()
-            base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
-            tool0_T_camera_vec = self.transformer.lookupTransform("tool0", "camera_depth_frame", rospy.Time(0))
-            tool0_T_camera = quaternion_matrix( [tool0_T_camera_vec[1][0], tool0_T_camera_vec[1][1],
-                                                tool0_T_camera_vec[1][2], tool0_T_camera_vec[1][3]] )
-            tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
-            base_T_camera = numpy.matmul(base_T_tool0,tool0_T_camera)
+            if base_T_camera is None:
+                base_T_camera = self.get_current_transform()
             # Find the neighbors on the part within camera view
             [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.3 )
             if len(idx)>0:

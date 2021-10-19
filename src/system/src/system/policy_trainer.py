@@ -13,8 +13,7 @@ from baselines.common.schedules import LinearSchedule
 
 class PolicyTrainer:
     def __init__(self, env, num_cpu=8):
-        # self.env = env
-        self.env = gym.make("CartPole-v0")
+        self.env = env
         self.num_cpu = num_cpu
 
     def DQN(self):
@@ -80,5 +79,5 @@ class PolicyTrainer:
                     logger.dump_tabular()
 
 if __name__=="__main__":
-    policy_trainer = PolicyTrainer("yxz")
+    policy_trainer = PolicyTrainer("")
     policy_trainer.DQN()

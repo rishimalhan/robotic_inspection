@@ -11,6 +11,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         self.grid_indices = []
         for voxel in self.get_all_voxels():
             self.grid_indices.append(voxel.grid_index)
+        self.number_voxels = len(self.grid_indices)
         self.max_indices = numpy.max(self.grid_indices,axis=0)+1
         self.reset()
 
@@ -29,6 +30,10 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
     def voxel_threshold_met(self):
         return numpy.all(self.number_observations==10)
     
+    def get_coverage(self):
+        return (numpy.where(self.number_observations > 0)[0].shape[0] / 
+                            self.number_voxels)
+
     def reset(self):
        self.number_observations = numpy.zeros(shape=(self.max_indices[0],
                                     self.max_indices[1],self.max_indices[2]),dtype=int)

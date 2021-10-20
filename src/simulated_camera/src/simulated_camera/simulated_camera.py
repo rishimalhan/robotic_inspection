@@ -46,7 +46,7 @@ class SimCamera:
         self.inspection_bot = inspection_bot
         self.empty_cloud = open3d.geometry.PointCloud()
         if part_stl_path:
-            logger.info("Reading stl")
+            logger.info("Reading stl. Path: {0}".format(self.part_stl_path))
             self.default_mesh = open3d.io.read_triangle_mesh(self.part_stl_path)
             logger.info("Stl read. Generating PointCloud")
             transform = rosparam.get_param("/stl_params/transform")
@@ -64,8 +64,9 @@ class SimCamera:
             self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
         self.max_bounds = numpy.hstack(( self.stl_cloud.get_max_bound(), [0.8,0.8,0.8] ))
         self.min_bounds = numpy.hstack(( self.stl_cloud.get_min_bound(), [-0.8,-0.8,-0.8] ))
+        self.max_bounds[2] += 0.5
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [self.min_bounds, self.max_bounds])
-
+    
     def publish_cloud(self):
         self.stl_cloud_pub = rospy.Publisher("stl_cloud", PointCloud2, queue_size=1)
         self.visible_cloud_pub = rospy.Publisher("visible_cloud", PointCloud2, queue_size=1)

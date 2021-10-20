@@ -1,5 +1,5 @@
 #! /usr/bin/python3
-from os import wait
+
 import rospy
 import numpy
 import logging
@@ -25,14 +25,14 @@ from system.perception_utils import (
 )
 from utilities.robot_utils import InspectionBot
 from utilities.visualizer import Visualizer
-from policy_trainer import PolicyTrainer
-from environment import InspectionEnv
+
 logger = logging.getLogger('rosout')
 
-import gym
-from stable_baselines.deepq.policies import MlpPolicy
-from stable_baselines.common.vec_env import DummyVecEnv
-from stable_baselines import DQN
+from environment import InspectionEnv
+from stable_baselines import (
+    DQN,
+    PPO2
+)
 
 def run_localization(inspection_bot):
     # Run the process of localizing the camera with respect to the robot end-effector
@@ -68,7 +68,7 @@ def start_simulated_camera(inspection_bot):
     stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
                             "/" + rosparam.get_param("/stl_params/name") + ".stl"
     sim_camera = SimCamera(inspection_bot, part_stl_path=stl_path)
-    sim_camera.publish_cloud()
+    # sim_camera.publish_cloud()
     return sim_camera
 
 def main():
@@ -99,13 +99,13 @@ def main():
     # print(point_error)
 
     env = InspectionEnv(inspection_bot, sim_camera)
-    model = DQN(MlpPolicy, env, verbose=1, exploration_fraction=0.6)
-    model.learn(total_timesteps=1000)
+    model = DQN('MlpPolicy', env, verbose=1, exploration_fraction=0.3)
+    model.learn(total_timesteps=5000)
     obs = env.reset()
     for i in range(100):
         action, _states = model.predict(obs)
         obs, rewards, done, info = env.step(action)
-        env.render(action)
+        env.render()
 
     inspection_bot.wrap_up()
 

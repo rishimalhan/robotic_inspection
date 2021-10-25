@@ -20,6 +20,10 @@ from utilities.filesystem_utils import (
     load_yaml
 )
 from simulated_camera.simulated_camera import SimCamera
+from system.planning_utils import(
+    state_to_pose,
+    tool0_from_camera
+)
 from system.perception_utils import (
     get_error_state
 )
@@ -33,6 +37,7 @@ from stable_baselines import (
     DQN,
     PPO2
 )
+from stable_baselines.common.evaluation import evaluate_policy
 
 def run_localization(inspection_bot):
     # Run the process of localizing the camera with respect to the robot end-effector
@@ -68,13 +73,14 @@ def start_simulated_camera(inspection_bot):
     stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
                             "/" + rosparam.get_param("/stl_params/name") + ".stl"
     sim_camera = SimCamera(inspection_bot, part_stl_path=stl_path)
-    # sim_camera.publish_cloud()
+    sim_camera.publish_cloud()
     return sim_camera
 
 def main():
     rospy.init_node("main")
     inspection_bot = bootstrap_system()
     home_config = rospy.get_param("/robot_positions/home")
+    camera_home_state = rospy.get_param("/camera_home")
 
     # # Check if robot is at home position within a threshold
     # current_config = inspection_bot.move_group.get_current_joint_values() # list
@@ -98,15 +104,29 @@ def main():
     # (point_error, normal_error) = get_error_state(cloud, transform,model=sim_camera.camera_model)
     # print(point_error)
 
-    env = InspectionEnv(inspection_bot, sim_camera)
-    model = DQN('MlpPolicy', env, verbose=1, exploration_fraction=0.3)
-    model.learn(total_timesteps=5000)
+    inspection_bot.execute(state_to_pose(tool0_from_camera(camera_home_state,sim_camera.transformer)))
+    path = get_pkg_path("system") + "/database/"
+    model_path = path+"inspection_model"
+
+    env = InspectionEnv(inspection_bot, sim_camera, camera_home_state)
+
+    model = DQN('MlpPolicy', env, verbose=1, exploration_fraction=0.6, 
+                exploration_final_eps=0.1, learning_starts=1000)
+    model.learn(total_timesteps=50000)
+    model.save(model_path)
+
+    # model = DQN.load(model_path, env=env)
+
+    # Evaluate the agent
+    mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
+    logger.info("Policy Evaluation. Mean: {0}. Reward: {1}".format(mean_reward,std_reward))
+
     obs = env.reset()
-    for i in range(100):
+    for i in range(20):
         action, _states = model.predict(obs)
         obs, rewards, done, info = env.step(action)
         env.render()
-
+    env.close()
     inspection_bot.wrap_up()
 
 if __name__=='__main__':

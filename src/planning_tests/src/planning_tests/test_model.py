@@ -22,6 +22,7 @@ def main():
     sim_camera.publish_cloud()
 
     home_config = rospy.get_param("/robot_positions/home")
+    camera_home = rospy.get_param("/camera_home")
     cloud_capture_config_1 = [0.19, 0, 0.61, 0, 0.87, 0] # Tied to stl_params transform
     cloud_capture_config_2 = [0.1, 0.19, 0.45, 0, 0.87, 0] # Tied to stl_params transform
 

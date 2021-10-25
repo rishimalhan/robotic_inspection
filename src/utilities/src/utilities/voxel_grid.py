@@ -1,5 +1,6 @@
 import numpy
 import open3d
+import sys
 
 class VoxelGrid(open3d.geometry.VoxelGrid):
     def __init__(self,points,bounds):
@@ -7,6 +8,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         self.max_bounds = bounds[1]
         cloud = open3d.geometry.PointCloud()
         cloud.points = open3d.utility.Vector3dVector(points)
+        cloud.colors = open3d.utility.Vector3dVector(numpy.ones(points.shape)*[0,0,1])
         self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.0015)
         self.grid_indices = []
         for voxel in self.get_all_voxels():

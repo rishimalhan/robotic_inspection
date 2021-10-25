@@ -80,8 +80,8 @@ class InspectionBot:
             tilt_constraint.link_name = "tool0"
             tilt_constraint.orientation.w = 1.0
             # Allow rotation of 45 degrees around the x y and z axis
-            tilt_constraint.absolute_x_axis_tolerance = 0.8
-            tilt_constraint.absolute_y_axis_tolerance = 0.8
+            # tilt_constraint.absolute_x_axis_tolerance = 0.8
+            # tilt_constraint.absolute_y_axis_tolerance = 0.8
             tilt_constraint.absolute_z_axis_tolerance = 0.8
             # The tilt constraint is the only constraint
             tilt_constraint.weight = 1

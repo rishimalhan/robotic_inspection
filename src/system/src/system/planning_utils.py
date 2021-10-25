@@ -13,12 +13,29 @@ from tf.transformations import (
     euler_from_quaternion
 )
 
+def tool0_from_camera(state, transformer):
+    base_T_camera = state_to_matrix(state)
+    tool0_T_camera_vec = transformer.lookupTransform("tool0", "camera_depth_frame", rospy.Time(0))
+    tool0_T_camera = quaternion_matrix( [tool0_T_camera_vec[1][0], tool0_T_camera_vec[1][1],
+                                        tool0_T_camera_vec[1][2], tool0_T_camera_vec[1][3]] )
+    tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
+    return matrix_to_state( numpy.matmul(base_T_camera,numpy.linalg.inv(tool0_T_camera)) )
+
 def pose_to_state(pose):
-    print(pose)
-    print(numpy.hstack(( [pose.position.x,pose.position.y,pose.position.z],
-                         euler_from_quaternion([pose.orientation.x,pose.orientation.y,pose.orientation.z,pose.orientation.w]))))
     return numpy.hstack(( [pose.position.x,pose.position.y,pose.position.z],
                          euler_from_quaternion([pose.orientation.x,pose.orientation.y,pose.orientation.z,pose.orientation.w])))
+
+def state_to_pose(state):
+    pose = Pose()
+    pose.position.x = state[0]
+    pose.position.y = state[1]
+    pose.position.z = state[2]
+    quaternion = quaternion_from_euler(state[3],state[4],state[5],'rxyz')
+    pose.orientation.x = quaternion[0]
+    pose.orientation.y = quaternion[1]
+    pose.orientation.z = quaternion[2]
+    pose.orientation.w = quaternion[3]
+    return pose
 
 def state_to_matrix(state):
     matrix = euler_matrix(state[3],state[4],state[5],'rxyz')
@@ -90,6 +107,7 @@ def generate_state_space(_cloud):
     return numpy.array(states)
 
 def generate_path_between_states(states):
+    return states
     # Linear interpolation between states maintaining the Z distance from the part
     # ToDo: Fix the Z distance from the part
     state1 = states[0]

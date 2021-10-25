@@ -83,7 +83,8 @@ class SimCamera:
                     (heatmap,stddev) = get_heatmap(visible_cloud, base_T_camera, self.camera_model)
                     from matplotlib import cm
                     try:
-                        colormap = cm.jet( numpy.subtract(heatmap,numpy.min(heatmap))/(numpy.max(heatmap-numpy.min(heatmap))))
+                        colormap = cm.jet( numpy.subtract(heatmap,numpy.min(heatmap))/
+                                                    (numpy.max(heatmap-numpy.min(heatmap))))
                         visible_cloud.colors = open3d.utility.Vector3dVector( colormap[:,0:3] )
                     except:
                         logger.warn("Heat map failed to generate.")

@@ -35,7 +35,7 @@ class CameraModel:
                 axis=1 ), numpy.ones(vision_parameters.shape[0],) * self.accuracy_sigma )
 
 class SimCamera:
-    def __init__(self, inspection_bot, part_stl_path=None, num_sample_points=20000):
+    def __init__(self, inspection_bot, part_stl_path=None, num_sample_points=10000):
         self.camera_model = CameraModel()
         self.overlay_error_map = True
         self.transformer = tf.TransformListener(True, rospy.Duration(10.0))
@@ -114,8 +114,6 @@ class SimCamera:
                 knn_point_vectors /= numpy.linalg.norm(knn_point_vectors,axis=1)[:,None]
                 visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,0] )>=0.9)[0],:]
                 if visible_points.shape[0]>0:
-                    visible_points[:,2] += numpy.random.normal(0.0, 1.0, 
-                                            (visible_points.shape[0],))*self.camera_model.z_sigma
                     visible_cloud.points = open3d.utility.Vector3dVector( visible_points )
                     visible_cloud.estimate_normals()
                     visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])

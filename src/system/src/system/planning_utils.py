@@ -12,6 +12,9 @@ from tf.transformations import (
     euler_from_matrix,
     euler_from_quaternion
 )
+from system.perception_utils import (
+    get_heatmap
+)
 
 def tool0_from_camera(state, transformer):
     base_T_camera = state_to_matrix(state)
@@ -46,7 +49,7 @@ def matrix_to_state(matrix):
     return numpy.hstack(( matrix[0:3,3],euler_from_matrix(matrix,'rxyz') ))
 
 def generate_waypoints_on_cloud(_cloud,transformer,get_pose):
-    cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.05))
+    cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.03))
     points = numpy.asarray(cloud.points)
     # Arrange points in increasing X value
     costs = points[:,0] + points[:,1]*10
@@ -90,20 +93,21 @@ def generate_path_between_states(states):
     pass
 
 def generate_state_space(_cloud):
-    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.03))
+    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.1))
     voxelized_cloud.normalize_normals()
     points = []
-    points.extend(numpy.asarray(voxelized_cloud.points) + numpy.array([0,0,0.15]))
+    # points.extend(numpy.asarray(voxelized_cloud.points) + numpy.array([0,0,0.15]))
     points.extend(numpy.asarray(voxelized_cloud.points) + numpy.array([0,0,0.2]))
     points = numpy.array(points)
-    normals = numpy.vstack(( numpy.asarray(voxelized_cloud.normals),numpy.asarray(voxelized_cloud.normals) ))
+    # normals = numpy.vstack(( numpy.asarray(voxelized_cloud.normals),numpy.asarray(voxelized_cloud.normals) ))
     states = []
-    for i,point in enumerate(points):
-        matrix = numpy.identity(4)
-        matrix[0:3,1] = [0,1,0]
-        matrix[0:3,2] = -normals[i,:]
-        matrix[0:3,0] = numpy.cross(matrix[0:3,1],matrix[0:3,2])
-        states.append( matrix_to_state(matrix) )
+    y_rotations = [0.872, 1.22, 1.57, 1.91, 2.2]
+    z_rotations = [-0.69, -0.34, 0, 0.34, 0.69]
+    for point in points:
+        for rotz in z_rotations:
+            states.append( numpy.hstack(( point,[0,1.57,rotz] )) )
+        for roty in y_rotations:
+            states.append( numpy.hstack(( point,[0,roty,0] )) )
     return numpy.array(states)
 
 def generate_path_between_states(states):
@@ -126,6 +130,10 @@ def generate_path_between_states(states):
 def update_cloud(path, sim_camera):
     # states are the transformation matrix for camera frame
     for state in path:
-        (cloud,_) = sim_camera.capture_point_cloud(base_T_camera=state_to_matrix(state))
+        base_T_camera = state_to_matrix(state)
+        (cloud,_) = sim_camera.capture_point_cloud(base_T_camera=base_T_camera)
+        (heatmap,_) = get_heatmap(cloud, base_T_camera, sim_camera.camera_model, vision_parameters=None)
+        heatmap = (heatmap - numpy.min(heatmap)) / (numpy.max(heatmap) - numpy.min(heatmap))
+        cloud = cloud.select_by_index(numpy.where(heatmap < 0.5)[0])
         sim_camera.voxel_grid.update_grid(cloud)
     return

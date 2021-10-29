@@ -2,6 +2,7 @@ import rospy
 from rviz_tools_py.rviz_tools import RvizMarkers
 import logging
 from tf import transformations
+from geometry_msgs.msg import Point
 logger = logging.getLogger("rosout")
 
 class Visualizer:
@@ -16,13 +17,20 @@ class Visualizer:
         self.markers.deleteAllMarkers()
 
     def start_visualizer(self):
-        logger.info("Starting up visualizer")
+        logger.info("Starting up visualizer.")
         while not rospy.is_shutdown():
             if self.axes is not None:
+                path = []
                 for axis in self.axes:
+                    point = Point()
+                    point.x = axis[0]
+                    point.y = axis[1]
+                    point.z = axis[2]
+                    path.append(point)
                     # Publish an axis using a numpy transform matrix
-                    T = transformations.euler_matrix(axis[3],axis[4],axis[5],'sxyz')
+                    T = transformations.euler_matrix(axis[3],axis[4],axis[5],'rxyz')
                     T[0:3,3] = axis[0:3]
                     axis_length = 0.01
                     axis_radius = 0.001
                     self.markers.publishAxis(T, axis_length, axis_radius, 2.0) # pose, axis length, radius, lifetime
+                self.markers.publishPath(path, width=0.001, color='green')

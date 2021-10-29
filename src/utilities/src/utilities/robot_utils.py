@@ -27,7 +27,7 @@ from geometry_msgs.msg import Quaternion
 logger = logging.getLogger('rosout')
 
 class InspectionBot:
-    def __init__(self, add_collision_obstacles=True, apply_orientation_constraint=True):
+    def __init__(self, add_collision_obstacles=True, apply_orientation_constraint=False):
         self.goal_position = JointState()
         self.goal_pose = Pose()
         self.goal_position.name = ["joint_"+str(i+1) for i in range(6)]
@@ -75,18 +75,19 @@ class InspectionBot:
             self.constraints = Constraints()
             self.constraints.name = "tilt constraint"
             tilt_constraint = OrientationConstraint()
-            tilt_constraint.header.frame_id = "tool0"
-            # The link that must be oriented upwards
+            tilt_constraint.header.frame_id = "base"
+            # The link that must be oriented downward
             tilt_constraint.link_name = "tool0"
-            tilt_constraint.orientation.w = 1.0
-            # Allow rotation of 45 degrees around the x y and z axis
-            # tilt_constraint.absolute_x_axis_tolerance = 0.8
-            # tilt_constraint.absolute_y_axis_tolerance = 0.8
-            tilt_constraint.absolute_z_axis_tolerance = 0.8
+            tilt_constraint.orientation = Quaternion(0.0, 1.0, 0.0, 0.0)
+            tilt_constraint.absolute_x_axis_tolerance = 0.6
+            tilt_constraint.absolute_y_axis_tolerance = 0.6
+            tilt_constraint.absolute_z_axis_tolerance = 0.05
             # The tilt constraint is the only constraint
             tilt_constraint.weight = 1
             self.constraints.orientation_constraints = [tilt_constraint]
             self.move_group.set_path_constraints(self.constraints)
+        else:
+            self.constraints = None
         return
 
     def wrap_up(self):
@@ -111,21 +112,28 @@ class InspectionBot:
         config.orientation.w = quaternion[3]
         return config
 
-    def execute_cartesian_path(self,waypoints,async_exec=False):
+    def execute_cartesian_path(self,waypoints, async_exec=False, vel_scale=1.0, acc_scale=1.0):
         (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, eef_step=0.01, jump_threshold=0.0,
-                                        path_constraints=self.constraints)
+                                        )
         if fraction != 1.0:
             logger.warn("Cartesian planning failure. Only covered {0} fraction of path.".format(fraction))
             return
         if not async_exec:
-            self.move_group.execute( plan,wait=True )
+            self.move_group.execute( self.move_group.retime_trajectory(
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
+                                acceleration_scaling_factor=acc_scale),wait=True )
             self.move_group.stop()
         else:
-            self.move_group.execute( plan,wait=False )
+            self.move_group.execute( self.move_group.retime_trajectory(
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
+                                acceleration_scaling_factor=acc_scale),wait=False )
         return plan
 
-    def execute(self, goal, async_exec=False):
-        (error_flag, plan, planning_time, error_code) = self.move_group.plan( goal )
+    def execute(self, goal, async_exec=False, vel_scale=1.0, acc_scale=1.0):
+        for i in range(5):
+            (error_flag, plan, planning_time, error_code) = self.move_group.plan( goal )
+            if error_flag:
+                break
         if error_flag:
             logger.info("Planning successful. Planning time: {0} s. Executing trajectory"
                                 .format(planning_time))
@@ -134,13 +142,13 @@ class InspectionBot:
             return
         if not async_exec:
             self.move_group.execute( self.move_group.retime_trajectory(
-                                self.move_group.get_current_state(),plan,velocity_scaling_factor=1.0,
-                                acceleration_scaling_factor=1.0),wait=True )
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
+                                acceleration_scaling_factor=acc_scale),wait=True )
             self.move_group.stop()
         else:
             self.move_group.execute( self.move_group.retime_trajectory(
-                                self.move_group.get_current_state(),plan,velocity_scaling_factor=1.0,
-                                acceleration_scaling_factor=1.0),wait=False )
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
+                                acceleration_scaling_factor=acc_scale),wait=False )
         return plan
     
     def get_current_forward_kinematics(self):

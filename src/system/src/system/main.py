@@ -15,12 +15,12 @@ from planning_utils import (
 from utilities.robot_utils import (
     bootstrap_system
 )
-from camera_localization.camera_localization import camera_localization
 from utilities.filesystem_utils import (
     get_pkg_path,
     load_yaml
 )
 from simulated_camera.simulated_camera import SimCamera
+from camera.camera import Camera
 from system.planning_utils import(
     state_to_pose,
     tool0_from_camera
@@ -37,35 +37,6 @@ from search_environment import InspectionEnv
 logger = logging.getLogger('rosout')
 
 
-def run_localization(inspection_bot):
-    # Run the process of localizing the camera with respect to the robot end-effector
-    home_config = rospy.get_param("/robot_positions/home")
-    image_capture = rospy.get_param("/robot_positions/image_capture")
-
-    # Check if robot is at home position within a threshold
-    current_config = inspection_bot.move_group.get_current_joint_values() # list
-    config_distance = numpy.linalg.norm( numpy.subtract(home_config,current_config) )
-    if config_distance > 1e-3:
-        logger.warning("Robot is not at home position. Euclidean distance: {0}. \
-                    Moving the robot to home position".format(config_distance))
-        inspection_bot.goal_position.position = home_config
-        inspection_bot.execute()
-
-    # Plan from home to image_capture node
-    logger.info("Moving to image capture node for camera localization")
-    inspection_bot.goal_position.position = image_capture
-    inspection_bot.execute()
-
-    # Assuming we are at Aruco node since execute command involves stop
-    base_T_camera = camera_localization()
-
-    # Plan from image_capture node to home
-    logger.info("Moving back to home")
-    inspection_bot.goal_position.position = home_config
-    inspection_bot.execute()
-
-    return base_T_camera
-
 def start_simulated_camera(inspection_bot):
     path = get_pkg_path("system")
     stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
@@ -74,12 +45,19 @@ def start_simulated_camera(inspection_bot):
     sim_camera.publish_cloud()
     return sim_camera
 
+def start_camera(inspection_bot,transformer):
+    camera_properties = rospy.get_param("/camera")
+    return Camera(inspection_bot,transformer,camera_properties)
+
 def main():
     rospy.init_node("main")
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
     home_state = rospy.get_param("/robot_positions/home")
-    camera_home_state = rospy.get_param("/camera_home")
+    camera_home_state = rospy.get_param("/camera/camera_home")
+    camera = start_camera(inspection_bot,transformer=transformer)
+    camera.localize()
+    sys.exit()
 
     # Check if robot is at home position
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(home_state,transformer))])

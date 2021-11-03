@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+
+import open3d
+import numpy
+import rosparam
+import logging
+import threading
+import rospy
+import tf
+import sys
+import copy
+from sensor_msgs.msg import PointCloud2
+from tf.transformations import quaternion_matrix
+from utilities.open3d_and_ros import (
+    convertCloudFromOpen3dToRos,
+    convertCloudFromRosToOpen3d
+)
+from utilities.voxel_grid import VoxelGrid
+from system.planning_utils import (
+    tf_to_matrix,
+    state_to_pose,
+    tool0_from_camera,
+)
+from camera.camera_localization import Localizer
+logger = logging.getLogger("rosout")
+
+class Camera:
+    def __init__(self, inspection_bot, transformer, camera_properties):
+        self.camera_properties = camera_properties
+        self.inspection_bot = inspection_bot
+        self.transformer = transformer
+        self.bbox = None
+        self.camera_frame = camera_properties.get("camera_frame")
+        self.localizer_tf = self.transformer.lookupTransform("tool0", self.camera_frame, rospy.Time(0))
+        self.localizer_matrix = tf_to_matrix(self.localizer_tf)
+        filters = camera_properties.get("filters")
+        if filters is not None:
+            if filters.get("bbox"):
+                if len(filters["bbox"])!=0:
+                    self.bbox = filters["bbox"]
+    
+    def get_current_transform(self):
+        base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
+        tool0_T_camera_vec = self.transformer.lookupTransform("tool0", self.camera_frame, rospy.Time(0))
+        tool0_T_camera = quaternion_matrix( [tool0_T_camera_vec[1][0], tool0_T_camera_vec[1][1],
+                                            tool0_T_camera_vec[1][2], tool0_T_camera_vec[1][3]] )
+        tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
+        return (numpy.matmul(base_T_tool0,tool0_T_camera), base_T_tool0, tool0_T_camera)
+
+    def trigger_camera(self):
+        # Get the cloud with respect to the base frame
+        ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
+                                                    PointCloud2,timeout=None)
+        open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
+        (transform,_,_) = self.get_current_transform()
+        return (open3d_cloud, transform)
+
+    def localize(self):
+        frames = self.camera_properties.get("localizer_frames")
+        clouds = []
+        transforms = []
+        logger.info("Moving robot to localizer frames and capturing data")
+        for frame in frames:
+            self.inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(frame,self.transformer))])
+            (base_T_camera,base_T_tool0,_) = self.get_current_transform()
+            transforms.append(base_T_tool0)
+            ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
+                                                    PointCloud2,timeout=None)
+            open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
+            open3d_cloud = open3d_cloud.transform(numpy.linalg.inv(base_T_camera))
+            clouds.append(open3d_cloud)
+        localizer = Localizer(clouds,transforms,self.localizer_tf)
+        # self.localizer_tf = localizer.localize()
+
+    def publish_cloud(self):
+        pass
+
+    def start_publisher(self):
+        pass
+
+    def capture_point_cloud(self, base_T_camera=None):
+        pass
+
+            
+        

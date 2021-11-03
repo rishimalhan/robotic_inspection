@@ -94,7 +94,7 @@ class SimCamera:
 
     def get_current_transform(self):
         base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
-        tool0_T_camera_vec = self.transformer.lookupTransform("tool0", "camera_depth_frame", rospy.Time(0))
+        tool0_T_camera_vec = self.transformer.lookupTransform("tool0", "camera_depth_optical_frame", rospy.Time(0))
         tool0_T_camera = quaternion_matrix( [tool0_T_camera_vec[1][0], tool0_T_camera_vec[1][1],
                                             tool0_T_camera_vec[1][2], tool0_T_camera_vec[1][3]] )
         tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
@@ -104,7 +104,7 @@ class SimCamera:
         if self.part_stl_path:
             visible_cloud = open3d.geometry.PointCloud()
             if base_T_camera is None:
-                base_T_camera = self.get_current_transform()
+                base_T_camera = [self.get_current_transform()]
             # Find the neighbors on the part within camera view
             [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.3 )
             if len(idx)>0:

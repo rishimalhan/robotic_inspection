@@ -4,7 +4,6 @@ import rospy
 import moveit_msgs
 from moveit_commander.robot import RobotCommander
 from moveit_commander.planning_scene_interface import PlanningSceneInterface
-from camera_localization.bootstrap_camera import bootstrap_camera
 from utilities.filesystem_utils import load_yaml
 from moveit_commander.move_group import MoveGroupCommander
 from sensor_msgs.msg import JointState
@@ -162,6 +161,5 @@ class InspectionBot:
 def bootstrap_system(sim_camera=False):
     # Bootstrap the robot parameters
     load_yaml("system", "system")
-    bootstrap_camera()
     inspection_bot = InspectionBot()
     return inspection_bot

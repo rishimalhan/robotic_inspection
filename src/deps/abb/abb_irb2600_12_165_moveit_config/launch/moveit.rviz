@@ -79,12 +79,53 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          camera_base:
+          camera_bottom_screw_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_color_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_color_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_depth_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_depth_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra1_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra1_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra2_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra2_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
           camera_mount:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          camera_usb_plug_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -181,12 +222,53 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          camera_base:
+          camera_bottom_screw_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_color_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_color_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_depth_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_depth_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra1_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra1_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra2_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_infra2_optical_frame:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          camera_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
           camera_mount:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          camera_usb_plug_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -271,11 +353,29 @@ Visualization Manager:
           Value: true
         base_link:
           Value: false
-        camera_base:
+        camera_bottom_screw_frame:
+          Value: false
+        camera_color_frame:
+          Value: false
+        camera_color_optical_frame:
           Value: false
         camera_depth_frame:
+          Value: false
+        camera_depth_optical_frame:
           Value: true
+        camera_infra1_frame:
+          Value: false
+        camera_infra1_optical_frame:
+          Value: false
+        camera_infra2_frame:
+          Value: false
+        camera_infra2_optical_frame:
+          Value: false
+        camera_link:
+          Value: false
         camera_mount:
+          Value: false
+        camera_usb_plug_link:
           Value: false
         flange:
           Value: false
@@ -311,11 +411,24 @@ Visualization Manager:
                     link_6:
                       flange:
                         tool0:
-                          camera_depth_frame:
-                            {}
+                          camera_bottom_screw_frame:
+                            camera_link:
+                              camera_color_frame:
+                                camera_color_optical_frame:
+                                  {}
+                              camera_depth_frame:
+                                camera_depth_optical_frame:
+                                  {}
+                              camera_infra1_frame:
+                                camera_infra1_optical_frame:
+                                  {}
+                              camera_infra2_frame:
+                                camera_infra2_optical_frame:
+                                  {}
+                              camera_usb_plug_link:
+                                {}
                           camera_mount:
-                            camera_base:
-                              {}
+                            {}
       Update Interval: 0
       Value: true
     - Alpha: 1

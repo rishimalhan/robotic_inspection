@@ -2,4 +2,12 @@
 <robot name="abb_irb2600_12_165" xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:include filename="$(find abb_irb2600_support)/urdf/irb2600_12_165_macro.xacro"/>
   <xacro:abb_irb2600_12_165 prefix=""/>
+
+  <xacro:arg name="use_nominal_extrinsics" default="true" />
+  <xacro:arg name="add_plug" default="true" />
+  <xacro:arg name="use_mesh" default="true" />
+  <xacro:include filename="$(find realsense2_description)/urdf/_d415.urdf.xacro" />
+  <xacro:sensor_d415 parent="camera_mount" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
+    <origin xyz="-0.004 0.0 0.032" rpy="0 -1.57 0"/>
+  </xacro:sensor_d415>
 </robot>

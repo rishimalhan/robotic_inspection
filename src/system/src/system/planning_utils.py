@@ -16,9 +16,18 @@ from system.perception_utils import (
     get_heatmap
 )
 
+def tf_to_state(tf):
+    return numpy.hstack(( tf[0],euler_from_quaternion(tf[1],'rxyz') ))
+
+def tf_to_matrix(tf):
+    matrix = quaternion_matrix( [tf[1][0], tf[1][1],
+                                            tf[1][2], tf[1][3]] )
+    matrix[0:3,3] = tf[0]
+    return matrix
+
 def tool0_from_camera(state, transformer):
     base_T_camera = state_to_matrix(state)
-    tool0_T_camera_vec = transformer.lookupTransform("tool0", "camera_depth_frame", rospy.Time(0))
+    tool0_T_camera_vec = transformer.lookupTransform("tool0", "camera_depth_optical_frame", rospy.Time(0))
     tool0_T_camera = quaternion_matrix( [tool0_T_camera_vec[1][0], tool0_T_camera_vec[1][1],
                                         tool0_T_camera_vec[1][2], tool0_T_camera_vec[1][3]] )
     tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
@@ -82,15 +91,12 @@ def generate_waypoints_on_cloud(_cloud,transformer,get_pose):
     tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
     camera_T_tool0 = numpy.linalg.inv(tool0_T_camera)
     for point in points:
-        base_T_camera = euler_matrix(0,1.57,0,'rxyz')
+        base_T_camera = euler_matrix(-3.14,0,-1.57,'rxyz')
         base_T_camera[0:3,3] = point[0:3]
         base_T_camera[2,3] += 0.15
         base_T_tool0 = numpy.matmul( base_T_camera,camera_T_tool0 )
         waypoints.append(get_pose(base_T_tool0))
     return waypoints
-
-def generate_path_between_states(states):
-    pass
 
 def generate_state_space(_cloud):
     voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.1))
@@ -101,13 +107,13 @@ def generate_state_space(_cloud):
     points = numpy.array(points)
     # normals = numpy.vstack(( numpy.asarray(voxelized_cloud.normals),numpy.asarray(voxelized_cloud.normals) ))
     states = []
-    y_rotations = [0.872, 1.22, 1.57, 1.91, 2.2]
-    z_rotations = [-0.69, -0.34, 0, 0.34, 0.69]
+    x_rotations = [-3.82, -3.48, -3.14, -2.8, -2.46]
+    y_rotations = [-0.69, -0.34, 0, 0.34, 0.69]
     for point in points:
-        for rotz in z_rotations:
-            states.append( numpy.hstack(( point,[0,1.57,rotz] )) )
+        for rotx in x_rotations:
+            states.append( numpy.hstack(( point,[rotx,0,-1.57] )) )
         for roty in y_rotations:
-            states.append( numpy.hstack(( point,[0,roty,0] )) )
+            states.append( numpy.hstack(( point,[-3.14,roty,-1.57] )) )
     return numpy.array(states)
 
 def generate_path_between_states(states):

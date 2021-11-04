@@ -17,7 +17,7 @@ from utilities.open3d_and_ros import (
 )
 from utilities.voxel_grid import VoxelGrid
 from system.planning_utils import (
-    tf_to_matrix,
+    tf_to_state,
     state_to_pose,
     tool0_from_camera,
 )
@@ -31,8 +31,7 @@ class Camera:
         self.transformer = transformer
         self.bbox = None
         self.camera_frame = camera_properties.get("camera_frame")
-        self.localizer_tf = self.transformer.lookupTransform("tool0", self.camera_frame, rospy.Time(0))
-        self.localizer_matrix = tf_to_matrix(self.localizer_tf)
+        self.localizer_tf = tf_to_state(self.transformer.lookupTransform("tool0", self.camera_frame, rospy.Time(0)))
         filters = camera_properties.get("filters")
         if filters is not None:
             if filters.get("bbox"):
@@ -56,6 +55,10 @@ class Camera:
         return (open3d_cloud, transform)
 
     def localize(self):
+        bbox = open3d.geometry.AxisAlignedBoundingBox()
+        localizer_bbox = numpy.array(self.camera_properties.get("filters").get("localizer_bbox"))
+        bbox.min_bound = localizer_bbox[0:3]
+        bbox.max_bound = localizer_bbox[3:6]
         frames = self.camera_properties.get("localizer_frames")
         clouds = []
         transforms = []
@@ -66,11 +69,13 @@ class Camera:
             transforms.append(base_T_tool0)
             ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
                                                     PointCloud2,timeout=None)
-            open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
+            open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud).transform(base_T_camera)
+            open3d_cloud = open3d_cloud.crop(bbox)
+            open3d_cloud = open3d_cloud.voxel_down_sample(voxel_size=0.01)
             open3d_cloud = open3d_cloud.transform(numpy.linalg.inv(base_T_camera))
             clouds.append(open3d_cloud)
         localizer = Localizer(clouds,transforms,self.localizer_tf)
-        # self.localizer_tf = localizer.localize()
+        self.localizer_tf = localizer.localize()
 
     def publish_cloud(self):
         pass

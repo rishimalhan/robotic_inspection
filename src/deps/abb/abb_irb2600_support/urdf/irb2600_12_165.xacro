@@ -8,6 +8,6 @@
   <xacro:arg name="use_mesh" default="true" />
   <xacro:include filename="$(find realsense2_description)/urdf/_d415.urdf.xacro" />
   <xacro:sensor_d415 parent="camera_mount" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
-    <origin xyz="-0.004 0.0 0.032" rpy="0 -1.57 0"/>
+    <origin xyz="-0.004 0.0 0.031" rpy="0 -1.57 0"/>
   </xacro:sensor_d415>
 </robot>

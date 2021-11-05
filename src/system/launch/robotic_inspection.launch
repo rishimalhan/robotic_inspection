@@ -12,7 +12,7 @@
     <!-- the "sim" argument controls whether we connect to a Simulated or Real robot -->
     <!--  - if sim=false, a robot_ip argument is required -->
     <arg name="sim" default="true" doc="Use industrial robot simulator instead of real robot" />
-    <arg name="robot_ip" unless="$(arg sim)" doc="IP of controller (only required if not using industrial simulator)" />
+    <!-- <arg name="robot_ip" unless="$(arg sim)" doc="IP of controller (only required if not using industrial simulator)" /> -->
 
     <!-- By default, we do not start a database (it can be large) -->
     <arg name="db" default="false" doc="Start the MoveIt database" />
@@ -34,7 +34,7 @@
     <!--   - replace these calls with appropriate robot-specific calls or launch files -->
     <group unless="$(arg sim)">
     <include file="$(find abb_irb2600_support)/launch/robot_interface_download_irb2600_12_165.launch" >
-        <arg name="robot_ip" value="$(arg robot_ip)"/>
+        <arg name="robot_ip" value="192.168.10.26"/>
     </include>
     </group>
 

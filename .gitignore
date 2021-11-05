@@ -2,6 +2,7 @@ build/
 devel/
 logs/
 .catkin_tools/
+*.zip
 .vscode/
 *.ply
 src/system/database/

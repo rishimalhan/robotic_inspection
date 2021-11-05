@@ -53,7 +53,7 @@ def main():
     rospy.init_node("main")
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
-    home_state = rospy.get_param("/robot_positions/home")
+    sys.exit()
     camera_home_state = rospy.get_param("/camera/camera_home")
     camera = start_camera(inspection_bot,transformer=transformer)
     camera.localize()

@@ -1,10 +1,9 @@
 robot_positions:
-  # home: [0, -0.31, 0.52, 0, 1.22, 0]
-  home: [0.8, 0.0, 0.9, -3.14, 0, 1.57]
+  home: [0.35, 1.079, 0.862, 3.14, 0, 1.57] # Location of tool0
 
 camera:
   camera_frame: "camera_depth_optical_frame"
-  camera_home: [0.81, 0.05, 0.65, -3.14, 0, 1.57]
+  calibration_plate_aruco: [0.8, 0.0, 0.9, -3.14, 0, 1.57]
   filters:
     localizer_bbox: [-1,-1,-2.0,1,1,0.3] # x,y,z limits with respect to camera frame
   localizer_frames: 
@@ -27,14 +26,14 @@ collision_boxes:
   front_floor:
     name: "front_floor"
     frame_id: "base_link"
-    position: [1.8, 0.0, 0.5]
+    position: [1.8, 0.0, 0.6]
     orientation: [0.0, 0.0, 0.0, 1.0]
     dimension: [2.0, 2.0, 0.01]
 
   left_floor:
     name: "left_floor"
     frame_id: "base_link"
-    position: [0.0, 1.9, 0.5]
+    position: [0.0, 1.6, 0.4]
     orientation: [0.0, 0.0, 0.0, 1.0]
     dimension: [2.0, 2.0, 0.01]
 
@@ -48,7 +47,7 @@ collision_boxes:
   left_wall:
     name: "left_wall"
     frame_id: "base_link"
-    position: [0.0, 0.9, 0.0]
+    position: [0.0, 1.5, 0.0]
     orientation: [0.0, 0.0, 0.0, 1.0]
     dimension: [5.0, 0.01, 5.0]
   

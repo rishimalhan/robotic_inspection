@@ -6,11 +6,13 @@ import rosparam
 import logging
 import threading
 import rospy
+from system.planning_utils import matrix_to_state
 import tf
 import sys
 import copy
 from sensor_msgs.msg import PointCloud2
 from tf.transformations import quaternion_matrix
+
 from utilities.open3d_and_ros import (
     convertCloudFromOpen3dToRos,
     convertCloudFromRosToOpen3d
@@ -55,11 +57,22 @@ class Camera:
         return (open3d_cloud, transform)
 
     def localize(self):
-        bbox = open3d.geometry.AxisAlignedBoundingBox()
-        localizer_bbox = numpy.array(self.camera_properties.get("filters").get("localizer_bbox"))
-        bbox.min_bound = localizer_bbox[0:3]
-        bbox.max_bound = localizer_bbox[3:6]
-        frames = self.camera_properties.get("localizer_frames")
+        self.plate_tf = tf_to_state(self.transformer.lookupTransform("base", "fiducial_7", rospy.Time(0)))
+        # Generate points around the aruco point to execute robot motions
+        plate_position = self.plate_tf[0:3] + numpy.array([0,0,0.3])
+        (base_T_camera,_,_) = self.get_current_transform()
+        camera_orientation = matrix_to_state(base_T_camera)[3:6]
+        frames = [numpy.hstack(( plate_position,camera_orientation ))]
+        # Randomly sample positions
+        for sample in numpy.random.uniform(low=-1, high=1, size=(20,6)):
+            frames.append(frames[0] + numpy.multiply(sample,numpy.array([0.1,0.1,0.0,0.3,0.3,0.3])))
+
+        # Determine the bounding box
+        # bbox = open3d.geometry.AxisAlignedBoundingBox()
+        # localizer_bbox = numpy.array(self.camera_properties.get("filters").get("localizer_bbox"))
+        # bbox.min_bound = localizer_bbox[0:3]
+        # bbox.max_bound = localizer_bbox[3:6]
+
         clouds = []
         transforms = []
         logger.info("Moving robot to localizer frames and capturing data")
@@ -70,12 +83,15 @@ class Camera:
             ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
                                                     PointCloud2,timeout=None)
             open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud).transform(base_T_camera)
-            open3d_cloud = open3d_cloud.crop(bbox)
+            # open3d_cloud = open3d_cloud.crop(bbox)
+            open3d_cloud = open3d_cloud.remove_statistical_outlier(nb_neighbors=20,std_ratio=2.0)[0]
             open3d_cloud = open3d_cloud.voxel_down_sample(voxel_size=0.01)
             open3d_cloud = open3d_cloud.transform(numpy.linalg.inv(base_T_camera))
             clouds.append(open3d_cloud)
         localizer = Localizer(clouds,transforms,self.localizer_tf)
         self.localizer_tf = localizer.localize()
+        return self.localizer_tf
+        
 
     def publish_cloud(self):
         pass

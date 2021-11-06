@@ -53,10 +53,15 @@
     <include file="$(find abb_irb2600_12_165_moveit_config)/launch/default_warehouse_db.launch" if="$(arg db)">
     <arg name="moveit_warehouse_database_path" value="$(arg db_path)"/>
     </include>
-    
+
+    <node name="add_collision_objects" pkg="system" type="add_collision_objects.py"/>
+
     <include file="$(find realsense2_camera)/launch/rs_camera.launch">
 	            <arg name="camera" value="camera"/>
 	            <arg name="serial_no" value="038522062901" />
 	            <arg name="filters" value="pointcloud,temporal,spatial"/>  
     </include>
+
+    <!-- Aruco -->
+    <include file="$(find system)/launch/aruco.launch"/>
 </launch>

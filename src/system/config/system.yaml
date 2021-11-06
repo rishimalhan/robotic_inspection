@@ -4,6 +4,7 @@ robot_positions:
 camera:
   camera_frame: "camera_depth_optical_frame"
   calibration_plate_aruco: [0.8, 0.0, 0.9, -3.14, 0, 1.57]
+  calibration_plate_id: 2
   filters:
     localizer_bbox: [-1,-1,-2.0,1,1,0.3] # x,y,z limits with respect to camera frame
   localizer_frames: 

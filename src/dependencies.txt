@@ -5,3 +5,4 @@ pip3 install numpy==1.18.0
 pip3 install open3d
 sudo apt-get install ros-noetic-realsense2-camera
 sudo apt-get install ros-noetic-realsense2-description
+sudo apt-get install ros-noetic-aruco-detect

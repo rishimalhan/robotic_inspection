@@ -30,10 +30,11 @@ logger = logging.getLogger('rosout')
 
 class InspectionBot:
     def __init__(self, apply_orientation_constraint=False):
-        if rospy.get_param("/robot_positions/home"):
-            self.robot_home = rospy.get_param("/robot_positions/home")
-        else:
-            raise logger.warn("Robot home position not found")
+        # if rospy.get_param("/robot_positions/home"):
+        #     self.robot_home = rospy.get_param("/robot_positions/home")
+        #     self.execute_cartesian_path([state_to_pose(self.robot_home)])
+        # else:
+        #     raise logger.warn("Robot home position not found")
         self.goal_position = JointState()
         self.goal_pose = Pose()
         self.goal_position.name = ["joint_"+str(i+1) for i in range(6)]
@@ -60,7 +61,6 @@ class InspectionBot:
             self.move_group.set_path_constraints(self.constraints)
         else:
             self.constraints = None
-        self.execute_cartesian_path([state_to_pose(self.robot_home)])
         return
 
     def wrap_up(self):

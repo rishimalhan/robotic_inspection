@@ -85,7 +85,7 @@ def generate_waypoints_on_cloud(_cloud,transformer,get_pose):
     points = numpy.array(sorted_points)
         
     waypoints = []
-    tool0_T_camera_vec = transformer.lookupTransform("tool0", "camera_depth_frame", rospy.Time(0))
+    tool0_T_camera_vec = transformer.lookupTransform("tool0", "camera_depth_optical_frame", rospy.Time(0))
     tool0_T_camera = quaternion_matrix( [tool0_T_camera_vec[1][0], tool0_T_camera_vec[1][1],
                                         tool0_T_camera_vec[1][2], tool0_T_camera_vec[1][3]] )
     tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
@@ -133,6 +133,13 @@ def generate_path_between_states(states):
         states.append( state1 + i*dp )
     return states
 
+def update_cloud_live(camera):
+    (cloud,base_T_camera) = camera.capture_point_cloud(base_T_camera=None)
+    (heatmap,_) = get_heatmap(cloud, base_T_camera, camera.camera_model, vision_parameters=None)
+    heatmap = (heatmap - numpy.min(heatmap)) / (numpy.max(heatmap) - numpy.min(heatmap))
+    cloud = cloud.select_by_index(numpy.where(heatmap < 0.6)[0])
+    camera.voxel_grid.update_grid(cloud)
+
 def update_cloud(path, sim_camera):
     # states are the transformation matrix for camera frame
     for state in path:
@@ -140,6 +147,6 @@ def update_cloud(path, sim_camera):
         (cloud,_) = sim_camera.capture_point_cloud(base_T_camera=base_T_camera)
         (heatmap,_) = get_heatmap(cloud, base_T_camera, sim_camera.camera_model, vision_parameters=None)
         heatmap = (heatmap - numpy.min(heatmap)) / (numpy.max(heatmap) - numpy.min(heatmap))
-        cloud = cloud.select_by_index(numpy.where(heatmap < 0.5)[0])
+        cloud = cloud.select_by_index(numpy.where(heatmap < 0.6)[0])
         sim_camera.voxel_grid.update_grid(cloud)
     return

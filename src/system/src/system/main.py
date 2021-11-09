@@ -23,10 +23,9 @@ from simulated_camera.simulated_camera import SimCamera
 from camera.camera import Camera
 from system.planning_utils import(
     state_to_pose,
-    tool0_from_camera
-)
-from system.perception_utils import (
-    get_error_state
+    tool0_from_camera,
+    update_cloud,
+    update_cloud_live
 )
 from utilities.robot_utils import InspectionBot
 from utilities.voxel_grid import VoxelGrid
@@ -53,21 +52,19 @@ def main():
     rospy.init_node("main")
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
-    camera = start_camera(inspection_bot,transformer=transformer)
-    camera.localize()
-    sys.exit()
+    
+    # camera = start_camera(inspection_bot,transformer=transformer)
+    # sys.exit()
 
     # Check if robot is at home position
-    inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(home_state,transformer))])
-    # current_config = inspection_bot.move_group.get_current_joint_values() # list
-    # config_distance = numpy.linalg.norm( numpy.subtract(home_config,current_config) )
-    # if config_distance > 1e-3:
-    #     logger.warning("Robot is not at home position. Euclidean distance: {0}. \
-    #                 Moving the robot to home position".format(config_distance))
-    #     inspection_bot.execute(inspection_bot.get_joint_state(home_config))
-
+    camera_home_state = [0.207, 0.933, 0.650, 3.14, 0, 0]
     sim_camera = start_simulated_camera(inspection_bot)
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera_home_state,sim_camera.transformer))])
+        
+    while not rospy.is_shutdown():
+        update_cloud_live(sim_camera)
+        rospy.sleep(0.1)
+    sys.exit()
     inspection_env = InspectionEnv(sim_camera, camera_home_state)
     camera_path = inspection_env.greedy_search()
     exec_path = inspection_env.get_executable_path( camera_path )

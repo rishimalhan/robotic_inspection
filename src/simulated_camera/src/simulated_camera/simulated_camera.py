@@ -11,6 +11,9 @@ import sys
 import copy
 from sensor_msgs.msg import PointCloud2
 from tf.transformations import quaternion_matrix
+from system.planning_utils import (
+    state_to_matrix
+)
 from utilities.open3d_and_ros import convertCloudFromOpen3dToRos
 from utilities.voxel_grid import VoxelGrid
 from system.perception_utils import (
@@ -50,9 +53,7 @@ class SimCamera:
             self.default_mesh = open3d.io.read_triangle_mesh(self.part_stl_path)
             logger.info("Stl read. Generating PointCloud")
             transform = rosparam.get_param("/stl_params/transform")
-            self.default_mesh = self.default_mesh.translate(transform[0:3])
-            R = self.default_mesh.get_rotation_matrix_from_xyz((transform[3], transform[4], transform[5]))
-            self.default_mesh = self.default_mesh.rotate(R, center=(0, 0, 0))
+            self.default_mesh = self.default_mesh.transform(state_to_matrix(transform))
             self.stl_cloud = self.default_mesh.sample_points_poisson_disk(number_of_points=num_sample_points)
             bottom_less_indices = numpy.where( numpy.asarray(self.stl_cloud.points)[:,2] > transform[2]-0.08 )[0]
             self.stl_cloud = self.stl_cloud.select_by_index(bottom_less_indices)
@@ -68,8 +69,9 @@ class SimCamera:
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [self.min_bounds, self.max_bounds])
     
     def publish_cloud(self):
-        self.stl_cloud_pub = rospy.Publisher("stl_cloud", PointCloud2, queue_size=1)
-        self.visible_cloud_pub = rospy.Publisher("visible_cloud", PointCloud2, queue_size=1)
+        self.stl_cloud_pub = rospy.Publisher("stl_cloud", PointCloud2, queue_size=10)
+        self.visible_cloud_pub = rospy.Publisher("visible_cloud", PointCloud2, queue_size=10)
+        self.constructed_cloud = rospy.Publisher("constructed_cloud", PointCloud2, queue_size=10)
         th = threading.Thread(target=self.start_publisher)
         th.start()
 
@@ -77,6 +79,7 @@ class SimCamera:
         # -- Convert open3d_cloud to ros_cloud, and publish. Until the subscribe receives it.
         while not self.stl_cloud.is_empty() and not rospy.is_shutdown():
             self.stl_cloud_pub.publish(convertCloudFromOpen3dToRos(self.stl_cloud, frame_id="base"))
+            self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.voxel_grid.get_cloud(), frame_id="base"))
             (visible_cloud, base_T_camera) = self.capture_point_cloud()
             if not visible_cloud.is_empty():
                 if self.overlay_error_map:
@@ -104,15 +107,15 @@ class SimCamera:
         if self.part_stl_path:
             visible_cloud = open3d.geometry.PointCloud()
             if base_T_camera is None:
-                base_T_camera = [self.get_current_transform()]
+                base_T_camera = self.get_current_transform()
             # Find the neighbors on the part within camera view
             [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.3 )
             if len(idx)>0:
                 stl_points = numpy.asarray(self.stl_cloud.points)
-                knn_points = stl_points[idx,:]
+                knn_points = stl_points[idx]
                 knn_point_vectors = numpy.subtract( knn_points, base_T_camera[0:3,3])
                 knn_point_vectors /= numpy.linalg.norm(knn_point_vectors,axis=1)[:,None]
-                visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,0] )>=0.9)[0],:]
+                visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,2] )>=0.9)[0]]
                 if visible_points.shape[0]>0:
                     visible_cloud.points = open3d.utility.Vector3dVector( visible_points )
                     visible_cloud.estimate_normals()

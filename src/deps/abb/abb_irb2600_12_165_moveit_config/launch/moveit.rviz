@@ -337,7 +337,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.0010000000474974513
+      Size (m): 0.003000000026077032
       Style: Spheres
       Topic: stl_cloud
       Unreliable: false
@@ -411,24 +411,23 @@ Visualization Manager:
                     link_6:
                       flange:
                         tool0:
-                          camera_bottom_screw_frame:
-                            camera_link:
-                              camera_color_frame:
-                                camera_color_optical_frame:
-                                  {}
-                              camera_depth_frame:
-                                camera_depth_optical_frame:
-                                  {}
-                              camera_infra1_frame:
-                                camera_infra1_optical_frame:
-                                  {}
-                              camera_infra2_frame:
-                                camera_infra2_optical_frame:
-                                  {}
-                              camera_usb_plug_link:
-                                {}
                           camera_mount:
-                            {}
+                            camera_bottom_screw_frame:
+                              camera_link:
+                                camera_color_frame:
+                                  camera_color_optical_frame:
+                                    {}
+                                camera_depth_frame:
+                                  camera_depth_optical_frame:
+                                    {}
+                                camera_infra1_frame:
+                                  camera_infra1_optical_frame:
+                                    {}
+                                camera_infra2_frame:
+                                  camera_infra2_optical_frame:
+                                    {}
+                                camera_usb_plug_link:
+                                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -459,6 +458,34 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 114; 159; 207
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: constructed_cloud
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.003000000026077032
+      Style: Spheres
+      Topic: constructed_cloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -475,7 +502,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.5584208965301514
+      Distance: 2.7238306999206543
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -483,17 +510,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.32339608669281006
-        Y: -0.01660621166229248
-        Z: 1.1175876579727628e-06
+        X: 0.11308476328849792
+        Y: 0.5397430062294006
+        Z: 1.0877853355850675e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.594797670841217
+      Pitch: 0.4797969460487366
       Target Frame: base_link
-      Yaw: 0.6485978960990906
+      Yaw: 2.368607997894287
     Saved: ~
 Window Geometry:
   Displays:

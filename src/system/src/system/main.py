@@ -36,29 +36,35 @@ from search_environment import InspectionEnv
 logger = logging.getLogger('rosout')
 
 
-def start_simulated_camera(inspection_bot):
+def start_simulated_camera(inspection_bot, start_publisher):
     path = get_pkg_path("system")
     stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
                             "/" + rosparam.get_param("/stl_params/name") + ".stl"
     sim_camera = SimCamera(inspection_bot, part_stl_path=stl_path)
-    sim_camera.publish_cloud()
+    if start_publisher:
+        sim_camera.publish_cloud()
     return sim_camera
 
-def start_camera(inspection_bot,transformer):
+def start_camera(inspection_bot,transformer, localize):
     camera_properties = rospy.get_param("/camera")
-    return Camera(inspection_bot,transformer,camera_properties)
+    return Camera(inspection_bot,transformer,camera_properties, localize)
 
 def main():
     rospy.init_node("main")
+    if len(sys.argv) < 3:
+        print("usage: main.py localize plan")
+    else:
+        localize = sys.argv[1] 
+        plan = sys.argv[2]
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
     
-    # camera = start_camera(inspection_bot,transformer=transformer)
+    # camera = start_camera(inspection_bot,transformer=transformer, localize=localize)
     # sys.exit()
 
     # Check if robot is at home position
     camera_home_state = [0.207, 0.933, 0.650, 3.14, 0, 0]
-    sim_camera = start_simulated_camera(inspection_bot)
+    sim_camera = start_simulated_camera(inspection_bot, start_publisher=False)
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera_home_state,sim_camera.transformer))])
         
     while not rospy.is_shutdown():

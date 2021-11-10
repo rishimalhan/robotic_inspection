@@ -45,22 +45,16 @@ def start_simulated_camera(inspection_bot, start_publisher):
         sim_camera.publish_cloud()
     return sim_camera
 
-def start_camera(inspection_bot,transformer, localize):
+def start_camera(inspection_bot,transformer, flags):
     camera_properties = rospy.get_param("/camera")
-    return Camera(inspection_bot,transformer,camera_properties, localize)
+    return Camera(inspection_bot,transformer,camera_properties, flags)
 
 def main():
     rospy.init_node("main")
-    if len(sys.argv) < 3:
-        print("usage: main.py localize plan")
-    else:
-        localize = sys.argv[1] 
-        plan = sys.argv[2]
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
-    
-    # camera = start_camera(inspection_bot,transformer=transformer, localize=localize)
-    # sys.exit()
+    camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
+    sys.exit()
 
     # Check if robot is at home position
     camera_home_state = [0.207, 0.933, 0.650, 3.14, 0, 0]

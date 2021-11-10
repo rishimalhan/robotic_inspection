@@ -11,6 +11,7 @@ from geometry_msgs.msg import(
     Pose,
     PoseStamped
 )
+import sys
 import numpy
 import logging
 from system.planning_utils import (
@@ -30,11 +31,6 @@ logger = logging.getLogger('rosout')
 
 class InspectionBot:
     def __init__(self, apply_orientation_constraint=False):
-        # if rospy.get_param("/robot_positions/home"):
-        #     self.robot_home = rospy.get_param("/robot_positions/home")
-        #     self.execute_cartesian_path([state_to_pose(self.robot_home)])
-        # else:
-        #     raise logger.warn("Robot home position not found")
         self.goal_position = JointState()
         self.goal_pose = Pose()
         self.goal_position.name = ["joint_"+str(i+1) for i in range(6)]
@@ -43,6 +39,12 @@ class InspectionBot:
         self.scene = PlanningSceneInterface(synchronous=True)
         self.move_group = MoveGroupCommander(self.group_name)
         self.traj_viz = None
+
+        if rospy.get_param("/robot_positions/home"):
+            self.robot_home = rospy.get_param("/robot_positions/home")
+            self.execute_cartesian_path([state_to_pose(self.robot_home)], avoid_collisions=False)
+        else:
+            raise logger.warn("Robot home position not found")
         
         if apply_orientation_constraint:
             self.constraints = Constraints()
@@ -85,8 +87,8 @@ class InspectionBot:
         config.orientation.w = quaternion[3]
         return config
 
-    def execute_cartesian_path(self,waypoints, async_exec=False, vel_scale=1.0, acc_scale=1.0):
-        (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, eef_step=0.01, jump_threshold=0.0,
+    def execute_cartesian_path(self,waypoints, avoid_collisions=True, async_exec=False, vel_scale=1.0, acc_scale=1.0):
+        (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, eef_step=0.01, jump_threshold=0.0, avoid_collisions=avoid_collisions
                                         )
         if fraction != 1.0:
             logger.warn("Cartesian planning failure. Only covered {0} fraction of path.".format(fraction))
@@ -96,7 +98,7 @@ class InspectionBot:
                                 self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
                                 acceleration_scaling_factor=acc_scale),wait=True )
             self.move_group.stop()
-            rospy.sleep(0.2)
+            rospy.sleep(0.3)
         else:
             self.move_group.execute( self.move_group.retime_trajectory(
                                 self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,

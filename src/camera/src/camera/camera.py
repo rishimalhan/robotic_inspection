@@ -31,28 +31,47 @@ from camera.camera_localization import Localizer
 logger = logging.getLogger("rosout")
 
 class Camera:
-    def __init__(self, inspection_bot, transformer, camera_properties, localize=False):
+    def __init__(self, inspection_bot, transformer, camera_properties, flags):
         self.camera_properties = camera_properties
         self.inspection_bot = inspection_bot
         self.transformer = transformer
+        path = get_pkg_path("system")
         # Scan the workspace boundary
-        boundary_frames = numpy.array(self.camera_properties.get("aruco_frames"))[1:]
-        boundary_points = []
-        for i,frame in enumerate(boundary_frames):
-            self.inspection_bot.execute_cartesian_path([state_to_pose(frame)])
-            boundary_points.append(tf_to_state(self.transformer.lookupTransform("base", "fiducial_"+str(i+1), rospy.Time(0))[0])[0:3])
-        boundary_points = numpy.array(boundary_points)
+        self.bbox_path = path + "/database/bbox.csv"
         self.bbox = open3d.geometry.AxisAlignedBoundingBox()
-        self.bbox.min_bound = numpy.min(boundary_points,axis=0)
-        self.bbox.max_bound = numpy.max(boundary_points,axis=0)
-        self.bbox.min_bound[2] += 0.01
-        self.bbox.max_bound[2] += 0.5
-
+        if "bbox" in flags:
+            boundary_frames = numpy.array(self.camera_properties.get("aruco_frames"))[0:4]
+            frame_names = numpy.array(self.camera_properties.get("frame_names"))
+            boundary_points = []
+            for i,frame in enumerate(boundary_frames):
+                self.inspection_bot.execute_cartesian_path([state_to_pose(frame)],avoid_collisions=False)
+                boundary_points.append(self.transformer.lookupTransform("base", frame_names[i], rospy.Time(0))[0])
+                
+            boundary_points = numpy.array(boundary_points)
+            self.bbox.min_bound = numpy.min(boundary_points,axis=0) - numpy.array([0,0,0.05])
+            self.bbox.max_bound = numpy.max(boundary_points,axis=0) + numpy.array([0,0,0.5])
+            numpy.savetxt(self.bbox_path,numpy.vstack(( self.bbox.min_bound,self.bbox.max_bound )),delimiter=",")
+        else:
+            bbox = numpy.loadtxt(self.bbox_path,delimiter=",")
+            self.bbox.min_bound = bbox[0]
+            self.bbox.max_bound = bbox[1]
+        logger.info("Workspace bounds determined wrt base frame. Min: {0}. Max: {1}".format(self.bbox.min_bound,self.bbox.max_bound))
+        
+        self.tf_path = path + "/database/tool0_T_camera.csv"
+        self.robot_home = rospy.get_param("/robot_positions/home")
+        self.inspection_bot.execute_cartesian_path([state_to_pose(self.robot_home)], avoid_collisions=True)
+        self.camera_frame = camera_properties.get("camera_frame")
+        if "localize" in flags:
+            self.localizer_tf = tf_to_state(self.transformer.lookupTransform("tool0", self.camera_frame, rospy.Time(0)))
+            self.localize()
+        else:
+            self.localizer_tf = numpy.loadtxt(self.tf_path,delimiter=",")
+        logger.info("Localizer transform: {0}.".format(self.localizer_tf))
+        return
         # Scan the part for coarse approximation
         part_frame = numpy.array(self.camera_properties.get("aruco_frames"))[0]
         self.inspection_bot.execute_cartesian_path([state_to_pose(part_frame)])
         part_transform = tf_to_matrix(self.transformer.lookupTransform("base", "fiducial_"+str(i+1), rospy.Time(0))[0])[0:3]
-        path = get_pkg_path("system")
         stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
                             "/" + rosparam.get_param("/stl_params/name") + ".stl"
         logger.info("Reading stl. Path: {0}".format(stl_path))
@@ -66,14 +85,6 @@ class Camera:
         min_bounds = numpy.hstack(( self.stl_cloud.get_min_bound(), [-0.8,-0.8,-0.8] ))
         self.max_bounds[2] += 0.5
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [min_bounds, max_bounds])
-        self.tf_path = path + "/database/tool0_T_camera.csv"
-
-        self.camera_frame = camera_properties.get("camera_frame")
-        if localize:
-            self.localize()
-            self.localizer_tf = tf_to_state(self.transformer.lookupTransform("tool0", self.camera_frame, rospy.Time(0)))
-        else:
-            self.localizer_tf = numpy.loadtxt(self.tf_path,delimiter=",")
         self.filters = camera_properties.get("filters")
             
     
@@ -88,21 +99,21 @@ class Camera:
                                                     PointCloud2,timeout=None)
         open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
         (transform,_,_) = self.get_current_transform()
-        open3d_cloud = open3d_cloud.remove_statistical_outlier(nb_neighbors=20,std_ratio=2.0)[0]
         open3d_cloud = open3d_cloud.transform(transform)
         open3d_cloud = open3d_cloud.crop(self.bbox)
         return (open3d_cloud, transform)
 
     def localize(self):
-        self.plate_tf = tf_to_state(self.transformer.lookupTransform("base", "fiducial_7", rospy.Time(0)))
+        logger.info("Intial value of camera to tool transform: {0}".format(self.localizer_tf))
+        self.plate_tf = tf_to_state(self.transformer.lookupTransform("base", "fiducial_6", rospy.Time(0)))
         # Generate points around the aruco point to execute robot motions
         plate_position = self.plate_tf[0:3] + numpy.array([0,0,0.3])
         (base_T_camera,_,_) = self.get_current_transform()
         camera_orientation = matrix_to_state(base_T_camera)[3:6]
         frames = [numpy.hstack(( plate_position,camera_orientation ))]
         # Randomly sample positions
-        for sample in numpy.random.uniform(low=-1, high=1, size=(20,6)):
-            frames.append(frames[0] + numpy.multiply(sample,numpy.array([0.1,0.1,0.0,0.3,0.3,0.3])))
+        for sample in numpy.random.uniform(low=-1, high=1, size=(10,6)):
+            frames.append(frames[0] + numpy.multiply(sample,numpy.array([0.2,0.2,0.0,0.2,0.2,0.2])))
 
         clouds = []
         transforms = []
@@ -110,13 +121,15 @@ class Camera:
         for frame in frames:
             self.inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(frame,self.transformer))])
             (open3d_cloud, base_T_camera) = self.trigger_camera()
+            open3d_cloud = open3d_cloud.voxel_down_sample(voxel_size=0.01)
+            open3d_cloud = open3d_cloud.remove_statistical_outlier(nb_neighbors=10,std_ratio=5.0)[0]
             open3d_cloud = open3d_cloud.transform(numpy.linalg.inv(base_T_camera))
             clouds.append(open3d_cloud)
             transforms.append(base_T_camera)
         localizer = Localizer(clouds,transforms,self.localizer_tf)
         # Correct the tf and store it in a file
         self.localizer_tf = localizer.localize()
-        numpy.savetxt(self.tf_path,delimiter=",")
+        numpy.savetxt(self.tf_path,self.localizer_tf,delimiter=",")
         return self.localizer_tf
         
     def publish_cloud(self):

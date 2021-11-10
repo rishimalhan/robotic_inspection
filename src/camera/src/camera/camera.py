@@ -67,27 +67,26 @@ class Camera:
         else:
             self.localizer_tf = numpy.loadtxt(self.tf_path,delimiter=",")
         logger.info("Localizer transform: {0}.".format(self.localizer_tf))
-        return
+        
         # Scan the part for coarse approximation
-        part_frame = numpy.array(self.camera_properties.get("aruco_frames"))[0]
+        part_frame = numpy.array(self.camera_properties.get("aruco_frames"))[4]
+        frame_name = numpy.array(self.camera_properties.get("frame_names"))[4]
         self.inspection_bot.execute_cartesian_path([state_to_pose(part_frame)])
-        part_transform = tf_to_matrix(self.transformer.lookupTransform("base", "fiducial_"+str(i+1), rospy.Time(0))[0])[0:3]
+        part_transform = tf_to_matrix(self.transformer.lookupTransform("base", frame_name, rospy.Time(0)))
+        rosparam.set_param("/stl_params/transform", matrix_to_state(part_transform))
         stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
                             "/" + rosparam.get_param("/stl_params/name") + ".stl"
         logger.info("Reading stl. Path: {0}".format(stl_path))
         self.mesh = open3d.io.read_triangle_mesh(stl_path)
         logger.info("Stl read. Generating PointCloud from stl")
         self.mesh = self.mesh.transform(part_transform)
-        self.stl_cloud = self.default_mesh.sample_points_poisson_disk(number_of_points=10000)
+        self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=10000)
         self.stl_cloud.estimate_normals()
         self.stl_cloud.normalize_normals()
         max_bounds = numpy.hstack(( self.stl_cloud.get_max_bound(), [0.8,0.8,0.8] ))
         min_bounds = numpy.hstack(( self.stl_cloud.get_min_bound(), [-0.8,-0.8,-0.8] ))
-        self.max_bounds[2] += 0.5
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [min_bounds, max_bounds])
-        self.filters = camera_properties.get("filters")
-            
-    
+        
     def get_current_transform(self):
         base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
         tool0_T_camera = state_to_matrix(self.localizer_tf)

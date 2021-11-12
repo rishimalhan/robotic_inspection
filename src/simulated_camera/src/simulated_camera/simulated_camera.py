@@ -104,26 +104,25 @@ class SimCamera:
         return numpy.matmul(base_T_tool0,tool0_T_camera)
 
     def capture_point_cloud(self, base_T_camera=None):
-        if self.part_stl_path:
-            visible_cloud = open3d.geometry.PointCloud()
-            if base_T_camera is None:
-                base_T_camera = self.get_current_transform()
-            # Find the neighbors on the part within camera view
-            [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.3 )
-            if len(idx)>0:
-                stl_points = numpy.asarray(self.stl_cloud.points)
-                knn_points = stl_points[idx]
-                knn_point_vectors = numpy.subtract( knn_points, base_T_camera[0:3,3])
-                knn_point_vectors /= numpy.linalg.norm(knn_point_vectors,axis=1)[:,None]
-                visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,2] )>=0.9)[0]]
-                if visible_points.shape[0]>0:
-                    visible_cloud.points = open3d.utility.Vector3dVector( visible_points )
-                    visible_cloud.estimate_normals()
-                    visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
-                    visible_cloud.normalize_normals()
-                    visible_cloud.colors = open3d.utility.Vector3dVector( 
-                                            numpy.ones(visible_points.shape)*[0.447,0.62,0.811])
-                return (visible_cloud,base_T_camera)
+        visible_cloud = open3d.geometry.PointCloud()
+        if base_T_camera is None:
+            base_T_camera = self.get_current_transform()
+        # Find the neighbors on the part within camera view
+        [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.3 )
+        if len(idx)>0:
+            stl_points = numpy.asarray(self.stl_cloud.points)
+            knn_points = stl_points[idx]
+            knn_point_vectors = numpy.subtract( knn_points, base_T_camera[0:3,3])
+            knn_point_vectors /= numpy.linalg.norm(knn_point_vectors,axis=1)[:,None]
+            visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,2] )>=0.9)[0]]
+            if visible_points.shape[0]>0:
+                visible_cloud.points = open3d.utility.Vector3dVector( visible_points )
+                visible_cloud.estimate_normals()
+                visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+                visible_cloud.normalize_normals()
+                visible_cloud.colors = open3d.utility.Vector3dVector( 
+                                        numpy.ones(visible_points.shape)*[0.447,0.62,0.811])
+            return (visible_cloud,base_T_camera)
         return (self.empty_cloud,None)
 
             

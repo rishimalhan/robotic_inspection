@@ -54,6 +54,10 @@ def main():
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
+    inspection_env = InspectionEnv(camera)
+    camera_path = inspection_env.greedy_search()
+    exec_path = inspection_env.get_executable_path( camera_path )
+    inspection_bot.execute_cartesian_path(exec_path,vel_scale=0.1,acc_scale=0.1)
     sys.exit()
 
     # Check if robot is at home position
@@ -65,10 +69,6 @@ def main():
         update_cloud_live(sim_camera)
         rospy.sleep(0.1)
     sys.exit()
-    inspection_env = InspectionEnv(sim_camera, camera_home_state)
-    camera_path = inspection_env.greedy_search()
-    exec_path = inspection_env.get_executable_path( camera_path )
-    inspection_bot.execute_cartesian_path(exec_path,vel_scale=0.1,acc_scale=0.1)
 
     inspection_bot.wrap_up()
 

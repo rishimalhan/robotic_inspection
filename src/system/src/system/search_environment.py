@@ -16,13 +16,13 @@ logger = logging.getLogger("rosout")
 
 
 class InspectionEnv:
-    def __init__(self, sim_camera, camera_home_state):
-        self.sim_camera = sim_camera
-        self.state_space = generate_state_space(self.sim_camera.stl_cloud)
+    def __init__(self, camera):
+        self.camera = camera
+        self.state_space = generate_state_space(self.camera.stl_cloud, self.camera.camera_home)
         self.ss_tree = KDTree(self.state_space)
-        self.state_zero = numpy.array(camera_home_state)
+        self.state_zero = numpy.array(self.camera.camera_home)
         self.step = 20
-        update_cloud([self.state_zero], self.sim_camera)
+        update_cloud([self.state_zero], self.camera)
         logger.info("Inspection Environment Initialized. Number of states: %d", self.state_space.shape[0])
 
     def get_children(self, state, query_number):
@@ -42,18 +42,18 @@ class InspectionEnv:
             if child in self.stored_obs:
                 new_obs = self.stored_obs[child]
             else:
-                (cloud,_) = self.sim_camera.capture_point_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
-                self.sim_camera.voxel_grid.update_grid(cloud)
-                new_obs = self.sim_camera.voxel_grid.new_obs
+                (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
+                self.camera.voxel_grid_sim.update_grid(cloud)
+                new_obs = self.camera.voxel_grid_sim.new_obs
                 self.stored_obs[child] = new_obs
-                self.sim_camera.voxel_grid.devolve_grid(cloud)
+                self.camera.voxel_grid_sim.devolve_grid(cloud)
             rate_gain = numpy.sum(new_obs) / numpy.linalg.norm( self.state_space[child]-parent )
             rewards = numpy.append( rewards, rate_gain )
         if numpy.any(rewards>0):
             child = children[numpy.argmax(rewards)]
             child_state = self.state_space[child]
-            (cloud,_) = self.sim_camera.capture_point_cloud(base_T_camera=state_to_matrix(child_state))
-            self.sim_camera.voxel_grid.update_grid(cloud)
+            (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(child_state))
+            self.camera.voxel_grid_sim.update_grid(cloud)
         if numpy.any(rewards<0):
             logger.warn("Rewards are negative. Potential bug")
         self.visited_states.append(child)
@@ -79,7 +79,7 @@ class InspectionEnv:
                     break
                         
             if child_state is not None:
-                coverage = self.sim_camera.voxel_grid.get_coverage()
+                coverage = self.camera.voxel_grid_sim.get_coverage()
                 path.append(child_state)
                 if coverage > 0.98:
                     stopping_condition = True
@@ -88,13 +88,13 @@ class InspectionEnv:
                 stopping_condition = True
         if coverage > 0.98:
             logger.info("Solution found with {0} points and {1} coverage"
-                            .format(len(path),self.sim_camera.voxel_grid.get_coverage()))
+                            .format(len(path),self.camera.voxel_grid_sim.get_coverage()))
         else:
             logger.info("Solution found without complete coverage")
         return numpy.array(path)
     
     def get_executable_path(self, path):
-        flange_path = numpy.array([tool0_from_camera(pose, self.sim_camera.transformer) for pose in path])
+        flange_path = numpy.array([tool0_from_camera(pose, self.camera.transformer) for pose in path])
         # Increase path density
         # if numpy.max( numpy.linalg.norm((flange_path[1:]-flange_path[0:-1])[:,0:3], axis=1) ) > 0.01:
         if False:

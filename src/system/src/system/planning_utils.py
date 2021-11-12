@@ -98,7 +98,7 @@ def generate_waypoints_on_cloud(_cloud,transformer,get_pose):
         waypoints.append(get_pose(base_T_tool0))
     return waypoints
 
-def generate_state_space(_cloud):
+def generate_state_space(_cloud, camera_home):
     voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.1))
     voxelized_cloud.normalize_normals()
     points = []
@@ -107,6 +107,7 @@ def generate_state_space(_cloud):
     points = numpy.array(points)
     # normals = numpy.vstack(( numpy.asarray(voxelized_cloud.normals),numpy.asarray(voxelized_cloud.normals) ))
     states = []
+    camera_orientation = camera_home[3:6]
     x_rotations = [-3.82, -3.48, -3.14, -2.8, -2.46]
     y_rotations = [-0.69, -0.34, 0, 0.34, 0.69]
     for point in points:

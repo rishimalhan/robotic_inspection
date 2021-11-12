@@ -86,6 +86,13 @@ class Camera:
         max_bounds = numpy.hstack(( self.stl_cloud.get_max_bound(), [0.8,0.8,0.8] ))
         min_bounds = numpy.hstack(( self.stl_cloud.get_min_bound(), [-0.8,-0.8,-0.8] ))
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [min_bounds, max_bounds])
+        self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.stl_cloud.points), [min_bounds, max_bounds])
+        self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
+        (base_T_camera,_,_) = self.get_current_transform()
+        current_orientation = matrix_to_state(base_T_camera)[3:6]
+        self.camera_home = numpy.hstack(( matrix_to_state(part_transform)[0:3] + numpy.array([0,0,0.3]),
+                                        current_orientation
+                                        ))
         
     def get_current_transform(self):
         base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
@@ -100,6 +107,9 @@ class Camera:
         (transform,_,_) = self.get_current_transform()
         open3d_cloud = open3d_cloud.transform(transform)
         open3d_cloud = open3d_cloud.crop(self.bbox)
+        points = numpy.asarray(open3d_cloud.points)
+        distances = numpy.linalg.norm(points-transform[0:3,3],axis=1)
+        open3d_cloud = open3d_cloud.select_by_index( numpy.where( distances < 0.35 and distances > 0.25 )[0] )
         return (open3d_cloud, transform)
 
     def localize(self):
@@ -130,15 +140,34 @@ class Camera:
         self.localizer_tf = localizer.localize()
         numpy.savetxt(self.tf_path,self.localizer_tf,delimiter=",")
         return self.localizer_tf
-        
+    
+    def get_simulated_cloud(self, base_T_camera=None):
+        visible_cloud = open3d.geometry.PointCloud()
+        if base_T_camera is None:
+            base_T_camera = self.get_current_transform()
+        # Find the neighbors on the part within camera view
+        [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.3 )
+        if len(idx)>0:
+            stl_points = numpy.asarray(self.stl_cloud.points)
+            knn_points = stl_points[idx]
+            knn_point_vectors = numpy.subtract( knn_points, base_T_camera[0:3,3])
+            knn_point_vectors /= numpy.linalg.norm(knn_point_vectors,axis=1)[:,None]
+            visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,2] )>=0.9)[0]]
+            if visible_points.shape[0]>0:
+                visible_cloud.points = open3d.utility.Vector3dVector( visible_points )
+                visible_cloud.estimate_normals()
+                visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+                visible_cloud.normalize_normals()
+                visible_cloud.colors = open3d.utility.Vector3dVector( 
+                                        numpy.ones(visible_points.shape)*[0.447,0.62,0.811])
+            return (visible_cloud,base_T_camera)
+        return (self.empty_cloud,None)
+
+
     def publish_cloud(self):
         pass
 
     def start_publisher(self):
         pass
-
-    def capture_point_cloud(self, base_T_camera=None):
-        pass
-
             
         

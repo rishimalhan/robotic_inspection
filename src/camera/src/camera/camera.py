@@ -28,10 +28,31 @@ from system.planning_utils import (
     state_to_matrix,
 )
 from camera.camera_localization import Localizer
+from system.perception_utils import (
+    get_heatmap
+)
 logger = logging.getLogger("rosout")
+
+class SimCameraModel:
+    def __init__(self):
+        self.z_sigma = 0.0 # Error 0.0 +- 3*sigma in meters
+        self.accuracy_sigma = 0.003
+        self.clearing_distance = 0.15
+        self.max_distance = 0.3
+
+    def predict(self,vision_parameters):
+        # We multiply error by z_sigma to bring it to max 1 cm. Error is max 1.0 before that
+        return (numpy.mean( numpy.column_stack(
+                    (100*numpy.power(vision_parameters[:,0],2) - 60*vision_parameters[:,0] + 9,
+                    0.01*numpy.exp(9.2*vision_parameters[:,1]),
+                    0.01*numpy.exp(1.466*vision_parameters[:,2]))
+                ),
+                axis=1 ), numpy.ones(vision_parameters.shape[0],) * self.accuracy_sigma )
 
 class Camera:
     def __init__(self, inspection_bot, transformer, camera_properties, flags):
+        self.empty_cloud = open3d.geometry.PointCloud()
+        self.camera_model = SimCameraModel()
         self.camera_properties = camera_properties
         self.inspection_bot = inspection_bot
         self.transformer = transformer
@@ -69,31 +90,47 @@ class Camera:
         logger.info("Localizer transform: {0}.".format(self.localizer_tf))
         
         # Scan the part for coarse approximation
-        part_frame = numpy.array(self.camera_properties.get("aruco_frames"))[4]
-        frame_name = numpy.array(self.camera_properties.get("frame_names"))[4]
-        self.inspection_bot.execute_cartesian_path([state_to_pose(part_frame)])
-        part_transform = tf_to_matrix(self.transformer.lookupTransform("base", frame_name, rospy.Time(0)))
-        rosparam.set_param("/stl_params/transform", matrix_to_state(part_transform))
+        part_tf_path = path + "/database/part_tf.csv"
+        if "part_tf" in flags:
+            part_frame = numpy.array(self.camera_properties.get("aruco_frames"))[4]
+            frame_name = numpy.array(self.camera_properties.get("frame_names"))[4]
+            self.inspection_bot.execute_cartesian_path([state_to_pose(part_frame)])
+            part_transform = tf_to_matrix(self.transformer.lookupTransform("base", frame_name, rospy.Time(0)))
+            part_transform[0:3,3] += rosparam.get_param("/stl_params/compensation")
+            numpy.savetxt(part_tf_path,matrix_to_state(part_transform),delimiter=",")
+        else:
+            part_transform = state_to_matrix( numpy.loadtxt(part_tf_path,delimiter=",") )
+            
         stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
                             "/" + rosparam.get_param("/stl_params/name") + ".stl"
         logger.info("Reading stl. Path: {0}".format(stl_path))
         self.mesh = open3d.io.read_triangle_mesh(stl_path)
         logger.info("Stl read. Generating PointCloud from stl")
         self.mesh = self.mesh.transform(part_transform)
+        import IPython
+        IPython.embed()
+        
+        sys.exit()
+
+        # Point cloud of STL surface only
         self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=10000)
+        bottom_less_indices = numpy.where( numpy.asarray(self.stl_cloud.points)[:,2] > part_transform[2,3]-0.08 )[0]
+        self.stl_cloud = self.stl_cloud.select_by_index(bottom_less_indices)
         self.stl_cloud.estimate_normals()
         self.stl_cloud.normalize_normals()
-        max_bounds = numpy.hstack(( self.stl_cloud.get_max_bound(), [0.8,0.8,0.8] ))
-        min_bounds = numpy.hstack(( self.stl_cloud.get_min_bound(), [-0.8,-0.8,-0.8] ))
-        self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [min_bounds, max_bounds])
-        self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.stl_cloud.points), [min_bounds, max_bounds])
+        surface_indices = numpy.where( numpy.asarray(self.stl_cloud.normals)[:,2] > 0.4 )[0]
+        self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
+        
+        self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.stl_cloud.points), sim=True)
+        self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points),create_from_bounds=True)
         self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
         (base_T_camera,_,_) = self.get_current_transform()
         current_orientation = matrix_to_state(base_T_camera)[3:6]
         self.camera_home = numpy.hstack(( matrix_to_state(part_transform)[0:3] + numpy.array([0,0,0.3]),
                                         current_orientation
                                         ))
-        
+        self.publish_cloud()
+
     def get_current_transform(self):
         base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
         tool0_T_camera = state_to_matrix(self.localizer_tf)
@@ -103,13 +140,13 @@ class Camera:
         # Get the cloud with respect to the base frame
         ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
                                                     PointCloud2,timeout=None)
-        open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
         (transform,_,_) = self.get_current_transform()
+        open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
         open3d_cloud = open3d_cloud.transform(transform)
         open3d_cloud = open3d_cloud.crop(self.bbox)
         points = numpy.asarray(open3d_cloud.points)
         distances = numpy.linalg.norm(points-transform[0:3,3],axis=1)
-        open3d_cloud = open3d_cloud.select_by_index( numpy.where( distances < 0.35 and distances > 0.25 )[0] )
+        open3d_cloud = open3d_cloud.select_by_index( numpy.where( (distances < 0.35) & (distances > 0.25) )[0] )
         return (open3d_cloud, transform)
 
     def localize(self):
@@ -146,7 +183,7 @@ class Camera:
         if base_T_camera is None:
             base_T_camera = self.get_current_transform()
         # Find the neighbors on the part within camera view
-        [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.3 )
+        [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.4 )
         if len(idx)>0:
             stl_points = numpy.asarray(self.stl_cloud.points)
             knn_points = stl_points[idx]
@@ -163,11 +200,55 @@ class Camera:
             return (visible_cloud,base_T_camera)
         return (self.empty_cloud,None)
 
-
     def publish_cloud(self):
-        pass
+        self.stl_cloud_pub = rospy.Publisher("stl_cloud", PointCloud2, queue_size=10)
+        self.visible_cloud_pub = rospy.Publisher("visible_cloud", PointCloud2, queue_size=10)
+        self.constructed_cloud = rospy.Publisher("constructed_cloud", PointCloud2, queue_size=10)
+        th = threading.Thread(target=self.start_publisher)
+        th.start()
 
     def start_publisher(self):
-        pass
+        while not rospy.is_shutdown():
+            # -- Convert open3d_cloud to ros_cloud, and publish. Until the subscribe receives it.
+            self.stl_cloud_pub.publish(convertCloudFromOpen3dToRos(self.stl_cloud, frame_id="base"))
+            self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.voxel_grid.get_cloud(), frame_id="base"))
+            # ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
+            #                                         PointCloud2,timeout=None)
+            # (transform,_,_) = self.get_current_transform()
+            # open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
+            # open3d_cloud = open3d_cloud.transform(transform)
+            # self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(open3d_cloud, frame_id="base"))
+            rospy.sleep(0.1)
+    
+    def construct_cloud(self):
+        logger.info("Starting cloud construction")
+        th = threading.Thread(target=self.update_cloud)
+        th.start()
+
+    def update_cloud_once(self):
+        (cloud,base_T_camera) = self.trigger_camera()
+        cloud = cloud.voxel_down_sample(voxel_size=0.001)
+        if not cloud.is_empty():
+            cloud.estimate_normals()
+            cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+            cloud.normalize_normals()
+            (heatmap,_) = get_heatmap(cloud, base_T_camera, self.camera_model, vision_parameters=None)
+            heatmap = (heatmap - numpy.min(heatmap)) / (numpy.max(heatmap) - numpy.min(heatmap))
+            cloud = cloud.select_by_index(numpy.where(heatmap < 0.3)[0])
+            self.voxel_grid.update_grid(cloud)
+
+    def update_cloud(self):
+        while not rospy.is_shutdown():
+            (cloud,base_T_camera) = self.trigger_camera()
+            cloud = cloud.voxel_down_sample(voxel_size=0.001)
+            if not cloud.is_empty():
+                cloud.estimate_normals()
+                cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+                cloud.normalize_normals()
+                (heatmap,_) = get_heatmap(cloud, base_T_camera, self.camera_model, vision_parameters=None)
+                heatmap = (heatmap - numpy.min(heatmap)) / (numpy.max(heatmap) - numpy.min(heatmap))
+                cloud = cloud.select_by_index(numpy.where(heatmap < 0.3)[0])
+                self.voxel_grid.update_grid(cloud)
+            rospy.sleep(0.01)
             
         

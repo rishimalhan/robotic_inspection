@@ -5,13 +5,10 @@ import numpy
 import logging
 import rosparam
 import sys
+import open3d
 import tf
 import moveit_msgs
 from rospy.core import is_shutdown
-from planning_utils import (
-    generate_waypoints_on_cloud,
-    generate_state_space
-)
 from utilities.robot_utils import (
     bootstrap_system
 )
@@ -25,7 +22,7 @@ from system.planning_utils import(
     state_to_pose,
     tool0_from_camera,
     update_cloud,
-    update_cloud_live
+    generate_zigzag
 )
 from utilities.robot_utils import InspectionBot
 from utilities.voxel_grid import VoxelGrid
@@ -54,23 +51,36 @@ def main():
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
-    inspection_env = InspectionEnv(camera)
-    camera_path = inspection_env.greedy_search()
-    exec_path = inspection_env.get_executable_path( camera_path )
-    inspection_bot.execute_cartesian_path(exec_path,vel_scale=0.1,acc_scale=0.1)
-    sys.exit()
+    inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
+    exec_path = generate_zigzag(camera.camera_home,transformer)
+    path = get_pkg_path("system")
+    # plan_path = path + "/database/planned_camera_path.csv"
+    # inspection_env = InspectionEnv(camera)
+    # if "plan" in sys.argv:
+    #     camera_path = inspection_env.greedy_search()
+    #     exec_path = inspection_env.get_executable_path( camera_path )
+    #     numpy.savetxt(plan_path,camera_path,delimiter=",")
+    # else:
+    #     camera_path = numpy.loadtxt(plan_path,delimiter=",")
+    #     exec_path = inspection_env.get_executable_path( camera_path )
+    camera.construct_cloud()
+    logger.info("Executing the path")
+    if inspection_bot.execute_cartesian_path(exec_path,vel_scale=0.01) is not None:
+        logger.info("Inspection complete. Writing pointcloud to file and exiting.")
+        constructed_cloud_path = path + "/database/output_cloud.pcd"
+        open3d.io.write_point_cloud(constructed_cloud_path, camera.voxel_grid.get_cloud())
+        logger.info("Pointcloud written.")
+    else:
+        logger.warn("Planning failure")
 
-    # Check if robot is at home position
-    camera_home_state = [0.207, 0.933, 0.650, 3.14, 0, 0]
-    sim_camera = start_simulated_camera(inspection_bot, start_publisher=False)
-    inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera_home_state,sim_camera.transformer))])
+    # # Check if robot is at home position
+    # camera_home_state = [0.207, 0.933, 0.650, 3.14, 0, 0]
+    # sim_camera = start_simulated_camera(inspection_bot, start_publisher=False)
+    # inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera_home_state,sim_camera.transformer))])
         
-    while not rospy.is_shutdown():
-        update_cloud_live(sim_camera)
-        rospy.sleep(0.1)
-    sys.exit()
-
-    inspection_bot.wrap_up()
+    # while not rospy.is_shutdown():
+    #     update_cloud_live(sim_camera)
+    #     rospy.sleep(0.1)
 
 if __name__=='__main__':
     main()

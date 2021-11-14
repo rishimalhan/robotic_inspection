@@ -22,10 +22,12 @@ def get_vision_coordinates(cloud, base_T_camera, angle_points_xaxis=None):
         distance_to_points = numpy.linalg.norm(transformed_points,axis=1)
         if angle_points_xaxis is None:
             normalized_points = transformed_points / distance_to_points[:,None]
-            angle_points_xaxis = numpy.arccos(normalized_points[:,0])
+            angle_points_xaxis = numpy.arccos(normalized_points[:,2])
+        transformed_normals[numpy.where(transformed_normals[:,2]<-1)[0],2] = -1
+        transformed_normals[numpy.where(transformed_normals[:,2]>1)[0],2] = 1
         return numpy.column_stack(( numpy.multiply(distance_to_points,numpy.cos(angle_points_xaxis)),
                                 numpy.multiply(distance_to_points,numpy.sin(angle_points_xaxis)),
-                                numpy.arccos(-transformed_normals[:,0])    ))
+                                numpy.arccos(-transformed_normals[:,2])    ))
 
 def get_heatmap(cloud, base_T_camera, model, vision_parameters=None):
     # Average error values for each function is 0.3-1.0. A factor 0.01 is multiplied to convert it to max 5 mm

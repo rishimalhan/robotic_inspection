@@ -11,6 +11,7 @@ import copy
 import logging
 import numpy
 import random
+import math
 import sys
 logger = logging.getLogger("rosout")
 
@@ -93,20 +94,21 @@ class InspectionEnv:
             logger.info("Solution found without complete coverage")
         return numpy.array(path)
     
-    def get_executable_path(self, path):
+    def get_executable_path(self, path, increase_density=False):
         flange_path = numpy.array([tool0_from_camera(pose, self.camera.transformer) for pose in path])
-        # Increase path density
-        # if numpy.max( numpy.linalg.norm((flange_path[1:]-flange_path[0:-1])[:,0:3], axis=1) ) > 0.01:
-        if False:
+        if increase_density:
+            # Increase path density
             exec_path = []
-            for i,state in enumerate(flange_path[1:]):
-                number_points = int(numpy.linalg.norm( (state-flange_path[i-1])[0:3] ) / 0.005)
-                if number_points==0:
-                    exec_path.append(state[i-1])
+            for i in range(1,flange_path.shape[0]):
+                number_points = math.ceil(numpy.linalg.norm( flange_path[i]-flange_path[i-1] ) / 0.1)
+                if number_points<2:
+                    exec_path.append( flange_path[i-1] )
                 else:
-                    dp = (state - flange_path[i-1]) / number_points
-                    for j in range(number_points-1):
-                        exec_path.append( flange_path[i-1] + j*dp )
+                    dp = (flange_path[i]-flange_path[i-1]) / number_points
+                    for j in range(number_points):
+                        exec_path.append( flange_path[i-1]+dp*j )
+            exec_path = numpy.array(exec_path)
+            logger.info("Number of points generated post density increase: %d",exec_path.shape[0])
         else:
             exec_path = flange_path.tolist()
         return [state_to_pose(pose) for pose in exec_path]

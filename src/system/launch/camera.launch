@@ -1,0 +1,10 @@
+<launch>
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+	            <arg name="camera" value="camera"/>
+	            <arg name="serial_no" value="038522062901" />
+	            <arg name="filters" value="pointcloud,temporal,spatial"/>  
+    </include>
+
+    <!-- Aruco -->
+    <!-- <include file="$(find system)/launch/aruco.launch"/> -->
+</launch>

@@ -26,7 +26,7 @@ from moveit_msgs.msg import (
     OrientationConstraint,
 )
 from geometry_msgs.msg import Quaternion
-
+import rosparam
 logger = logging.getLogger('rosout')
 
 class InspectionBot:
@@ -42,7 +42,7 @@ class InspectionBot:
 
         if rospy.get_param("/robot_positions/home"):
             self.robot_home = rospy.get_param("/robot_positions/home")
-            self.execute_cartesian_path([state_to_pose(self.robot_home)], avoid_collisions=False)
+            self.execute_cartesian_path([state_to_pose(self.robot_home)], avoid_collisions=True)
         else:
             raise logger.warn("Robot home position not found")
         
@@ -87,25 +87,22 @@ class InspectionBot:
         config.orientation.w = quaternion[3]
         return config
 
-    def execute_cartesian_path(self,waypoints, avoid_collisions=True, async_exec=False, vel_scale=1.0, acc_scale=1.0):
+    def execute_cartesian_path(self,waypoints, avoid_collisions=True, async_exec=False, vel_scale=1.0):
         (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, eef_step=0.01, jump_threshold=0.0, avoid_collisions=avoid_collisions
                                         )
         if fraction != 1.0:
             logger.warn("Cartesian planning failure. Only covered {0} fraction of path.".format(fraction))
-            return
+            return None
         if not async_exec:
             self.move_group.execute( self.move_group.retime_trajectory(
-                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
-                                acceleration_scaling_factor=acc_scale),wait=True )
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale),wait=True )
             self.move_group.stop()
-            rospy.sleep(0.3)
         else:
             self.move_group.execute( self.move_group.retime_trajectory(
-                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
-                                acceleration_scaling_factor=acc_scale),wait=False )
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale),wait=False )
         return plan
 
-    def execute(self, goal, async_exec=False, vel_scale=1.0, acc_scale=1.0):
+    def execute(self, goal, async_exec=False, vel_scale=1.0):
         for i in range(5):
             (error_flag, plan, planning_time, error_code) = self.move_group.plan( goal )
             if error_flag:
@@ -118,14 +115,11 @@ class InspectionBot:
             return
         if not async_exec:
             self.move_group.execute( self.move_group.retime_trajectory(
-                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
-                                acceleration_scaling_factor=acc_scale),wait=True )
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale),wait=True )
             self.move_group.stop()
-            rospy.sleep(0.2)
         else:
             self.move_group.execute( self.move_group.retime_trajectory(
-                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale,
-                                acceleration_scaling_factor=acc_scale),wait=False )
+                                self.move_group.get_current_state(),plan,velocity_scaling_factor=vel_scale),wait=False )
         return plan
     
     def get_current_forward_kinematics(self):

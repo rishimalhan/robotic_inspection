@@ -66,7 +66,7 @@ class SimCamera:
         self.max_bounds = numpy.hstack(( self.stl_cloud.get_max_bound(), [0.8,0.8,0.8] ))
         self.min_bounds = numpy.hstack(( self.stl_cloud.get_min_bound(), [-0.8,-0.8,-0.8] ))
         self.max_bounds[2] += 0.5
-        self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points), [self.min_bounds, self.max_bounds])
+        self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.stl_cloud.points), [self.min_bounds, self.max_bounds])
     
     def publish_cloud(self):
         self.stl_cloud_pub = rospy.Publisher("stl_cloud", PointCloud2, queue_size=10)
@@ -79,7 +79,7 @@ class SimCamera:
         # -- Convert open3d_cloud to ros_cloud, and publish. Until the subscribe receives it.
         while not self.stl_cloud.is_empty() and not rospy.is_shutdown():
             self.stl_cloud_pub.publish(convertCloudFromOpen3dToRos(self.stl_cloud, frame_id="base"))
-            self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.voxel_grid.get_cloud(), frame_id="base"))
+            self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.voxel_grid_sim.get_cloud(), frame_id="base"))
             (visible_cloud, base_T_camera) = self.capture_point_cloud()
             if not visible_cloud.is_empty():
                 if self.overlay_error_map:
@@ -103,7 +103,7 @@ class SimCamera:
         tool0_T_camera[0:3,3] = tool0_T_camera_vec[0]
         return numpy.matmul(base_T_tool0,tool0_T_camera)
 
-    def capture_point_cloud(self, base_T_camera=None):
+    def get_simulated_cloud(self, base_T_camera=None):
         visible_cloud = open3d.geometry.PointCloud()
         if base_T_camera is None:
             base_T_camera = self.get_current_transform()

@@ -2,7 +2,11 @@ import rospy
 from rviz_tools_py.rviz_tools import RvizMarkers
 import logging
 from tf import transformations
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import (
+    Point,
+    Pose
+)
+from system.planning_utils import pose_to_state
 logger = logging.getLogger("rosout")
 
 class Visualizer:
@@ -22,6 +26,8 @@ class Visualizer:
             if self.axes is not None:
                 path = []
                 for axis in self.axes:
+                    if isinstance(axis,Pose):
+                        axis = pose_to_state(axis)
                     point = Point()
                     point.x = axis[0]
                     point.y = axis[1]

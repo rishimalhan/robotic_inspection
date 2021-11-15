@@ -107,10 +107,6 @@ class Camera:
         self.mesh = open3d.io.read_triangle_mesh(stl_path)
         logger.info("Stl read. Generating PointCloud from stl")
         self.mesh = self.mesh.transform(part_transform)
-        import IPython
-        IPython.embed()
-        
-        sys.exit()
 
         # Point cloud of STL surface only
         self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=10000)
@@ -136,17 +132,18 @@ class Camera:
         tool0_T_camera = state_to_matrix(self.localizer_tf)
         return (numpy.matmul(base_T_tool0,tool0_T_camera), base_T_tool0, tool0_T_camera)
 
-    def trigger_camera(self):
+    def trigger_camera(self, filters=True):
         # Get the cloud with respect to the base frame
         ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
                                                     PointCloud2,timeout=None)
         (transform,_,_) = self.get_current_transform()
         open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
         open3d_cloud = open3d_cloud.transform(transform)
-        open3d_cloud = open3d_cloud.crop(self.bbox)
-        points = numpy.asarray(open3d_cloud.points)
-        distances = numpy.linalg.norm(points-transform[0:3,3],axis=1)
-        open3d_cloud = open3d_cloud.select_by_index( numpy.where( (distances < 0.35) & (distances > 0.25) )[0] )
+        if filters:
+            open3d_cloud = open3d_cloud.crop(self.bbox)
+            points = numpy.asarray(open3d_cloud.points)
+            distances = numpy.linalg.norm(points-transform[0:3,3],axis=1)
+            open3d_cloud = open3d_cloud.select_by_index( numpy.where( (distances < 0.35) & (distances > 0.25) )[0] )
         return (open3d_cloud, transform)
 
     def localize(self):
@@ -181,24 +178,22 @@ class Camera:
     def get_simulated_cloud(self, base_T_camera=None):
         visible_cloud = open3d.geometry.PointCloud()
         if base_T_camera is None:
-            base_T_camera = self.get_current_transform()
-        # Find the neighbors on the part within camera view
-        [k, idx, distance] = self.stl_kdtree.search_radius_vector_3d( base_T_camera[0:3,3], radius=0.4 )
-        if len(idx)>0:
-            stl_points = numpy.asarray(self.stl_cloud.points)
-            knn_points = stl_points[idx]
-            knn_point_vectors = numpy.subtract( knn_points, base_T_camera[0:3,3])
-            knn_point_vectors /= numpy.linalg.norm(knn_point_vectors,axis=1)[:,None]
-            visible_points = knn_points[numpy.where(numpy.dot( knn_point_vectors, base_T_camera[0:3,2] )>=0.9)[0]]
-            if visible_points.shape[0]>0:
-                visible_cloud.points = open3d.utility.Vector3dVector( visible_points )
-                visible_cloud.estimate_normals()
-                visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
-                visible_cloud.normalize_normals()
-                visible_cloud.colors = open3d.utility.Vector3dVector( 
-                                        numpy.ones(visible_points.shape)*[0.447,0.62,0.811])
+            (base_T_camera,_,_) = self.get_current_transform()
+        
+        # Make the cube bounding box as the field of view
+        # Bounding box to crop pointcloud that the camera sees wrt depth optical frame
+        axbbox = open3d.geometry.AxisAlignedBoundingBox()
+        axbbox.min_bound = numpy.array([ -0.2,-0.2, 0.25 ])
+        axbbox.max_bound = numpy.array([ 0.2,0.2, 0.35 ])
+        fov = open3d.geometry.OrientedBoundingBox().create_from_axis_aligned_bounding_box(axbbox)
+        fov.center = base_T_camera[0:3,3] + 0.3*base_T_camera[0:3,2]
+        visible_cloud = self.stl_cloud.crop(fov)
+        if visible_cloud.is_empty():
             return (visible_cloud,base_T_camera)
-        return (self.empty_cloud,None)
+        visible_cloud.estimate_normals()
+        visible_cloud.normalize_normals()
+        visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+        return (visible_cloud,base_T_camera)
 
     def publish_cloud(self):
         self.stl_cloud_pub = rospy.Publisher("stl_cloud", PointCloud2, queue_size=10)
@@ -212,12 +207,9 @@ class Camera:
             # -- Convert open3d_cloud to ros_cloud, and publish. Until the subscribe receives it.
             self.stl_cloud_pub.publish(convertCloudFromOpen3dToRos(self.stl_cloud, frame_id="base"))
             self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.voxel_grid.get_cloud(), frame_id="base"))
-            # ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
-            #                                         PointCloud2,timeout=None)
-            # (transform,_,_) = self.get_current_transform()
-            # open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
-            # open3d_cloud = open3d_cloud.transform(transform)
-            # self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(open3d_cloud, frame_id="base"))
+            # open3d_cloud = self.trigger_camera(filters=False)
+            open3d_cloud = self.get_simulated_cloud()[0]
+            self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(open3d_cloud, frame_id="base"))
             rospy.sleep(0.1)
     
     def construct_cloud(self):

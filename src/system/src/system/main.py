@@ -52,6 +52,9 @@ def main():
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
+    while not rospy.is_shutdown():
+        rospy.sleep(0.1)
+    sys.exit()
     exec_path = generate_zigzag(camera.camera_home,transformer)
     path = get_pkg_path("system")
     # plan_path = path + "/database/planned_camera_path.csv"

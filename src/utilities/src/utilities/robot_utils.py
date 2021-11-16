@@ -27,6 +27,8 @@ from moveit_msgs.msg import (
 )
 from geometry_msgs.msg import Quaternion
 import rosparam
+from .get_fk import GetFK
+from .get_ik import GetIK
 logger = logging.getLogger('rosout')
 
 class InspectionBot:
@@ -38,6 +40,8 @@ class InspectionBot:
         self.robot = RobotCommander()
         self.scene = PlanningSceneInterface(synchronous=True)
         self.move_group = MoveGroupCommander(self.group_name)
+        self.get_fk = GetFK("tool0", "base_link")
+        self.get_ik = GetIK(group=self.group_name, ik_attempts=10, avoid_collisions=True)
         self.traj_viz = None
 
         if rospy.get_param("/robot_positions/home"):
@@ -129,6 +133,17 @@ class InspectionBot:
         forward_kinematics[0:3,3] = [current_pose.position.x, current_pose.position.y, current_pose.position.z]
         return numpy.array(forward_kinematics)
 
+    def pose_error(self,joints):
+        fk = self.get_fk.get_fk(joints)
+
+    def execute_greedy_ik(self,waypoints):
+        for pose in waypoints:
+            ik_pose = PoseStamped()
+            ik_pose.header = "base_link"
+            ik_pose.pose = pose
+            joints = self.get_ik.get_ik(ik_pose)
+            print(joints)
+        pass
 
 def bootstrap_system(sim_camera=False):
     # Bootstrap the robot parameters

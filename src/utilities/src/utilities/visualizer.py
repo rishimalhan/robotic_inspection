@@ -7,6 +7,7 @@ from geometry_msgs.msg import (
     Pose
 )
 from system.planning_utils import pose_to_state
+import threading
 logger = logging.getLogger("rosout")
 
 class Visualizer:
@@ -19,6 +20,11 @@ class Visualizer:
     def __del__(self):
         logger.info("Cleaning up visualizer")
         self.markers.deleteAllMarkers()
+
+    def start_visualizer_async(self):
+        logger.info("Starting cloud construction")
+        th = threading.Thread(target=self.start_visualizer)
+        th.start()
 
     def start_visualizer(self):
         logger.info("Starting up visualizer.")

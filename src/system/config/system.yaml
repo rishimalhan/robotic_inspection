@@ -4,20 +4,23 @@ robot_positions:
 camera:
   camera_frame: "camera_depth_optical_frame"
   # fiducials 7,8,3,4 are boundary markers starting from top right of table in clockwise direction
-  frame_names: ["fiducial_7", "fiducial_8", "fiducial_3", "fiducial_4", "fiducial_1"]
+  frame_names: ["fiducial_7", "fiducial_8", "fiducial_3", "fiducial_4"]
   aruco_frames: # fiducials 1-5 with respect to tool0
     - [0.78, 1.3, 0.47, 3.14, 0, 1.57] # Part aruco
     - [0.78, 0.715, 0.47, 3.14, 0, 1.57] # Boundary arucos
     - [-0.45, 0.733, 0.47, 3.14, 0, 1.57]
     - [-0.45, 1.3, 0.47, 3.14, 0, 1.57]
-    - [0.396, 1.013, 0.606, 3.14, 0, 1.57]
 
 stl_params:
-  name: "composite_mold"
+  name: "partA"
   directory_path: "/database/meshes"
-  compensation: [0.018, -0.016, 0] # Aruco compensation wrt base frame
+  compensation: [0.018, -0.017, 0] # Aruco compensation wrt base frame
   transform: [ 0.3, 0.8, 0.5, 0.0, 0.0, 1.57 ] # xyzrpy. Only for simulated camera.
   color: [0.5, 0.5, 0.5]
+  aruco_frame_name: "fiducial_1"
+  aruco_frame: [0.4, 1.1, 0.707, 3.14, 0, 1.57]
+  filters:
+    max_angle_with_normal: 1.4 # radians
 
 # Collision box
 # position is x, y, z

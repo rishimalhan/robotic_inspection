@@ -8,15 +8,13 @@ class Voxel:
         self.cg = None
         return
 
-    def reject_outliers(self,data, m = 0.5):
+    def reject_outliers(self,data, m = 1.0):
         d = numpy.abs(data - numpy.median(data))
         mdev = numpy.median(d)
         s = d/mdev if mdev else 0.
         return data[s<m]
 
     def add_point(self,point):
-        if len(self.points)==100:
-            return
         self.points.append(point)
         if len(self.points)==1:
             self.cg = self.points[0].tolist()
@@ -36,7 +34,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         for voxel in self.get_all_voxels():
             self.grid_indices.append(voxel.grid_index)
         self.number_voxels = len(self.grid_indices)
-        self.threshold_obs = 3
+        self.threshold_obs = 10
         self.max_points = self.number_voxels*self.threshold_obs
         self.max_indices = numpy.max(self.grid_indices,axis=0)+1
         self.cg_array = []

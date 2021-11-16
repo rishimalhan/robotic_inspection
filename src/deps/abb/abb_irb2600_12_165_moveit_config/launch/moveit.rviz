@@ -380,6 +380,8 @@ Visualization Manager:
           Value: false
         fiducial_1:
           Value: true
+        fiducial_6:
+          Value: true
         flange:
           Value: false
         link_1:
@@ -420,6 +422,8 @@ Visualization Manager:
                                 camera_color_frame:
                                   camera_color_optical_frame:
                                     fiducial_1:
+                                      {}
+                                    fiducial_6:
                                       {}
                                 camera_depth_frame:
                                   camera_depth_optical_frame:
@@ -506,7 +510,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.5702943801879883
+      Distance: 2.2618589401245117
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -514,17 +518,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.13481274247169495
-        Y: 0.49755948781967163
+        X: 0.07109048962593079
+        Y: 0.821546733379364
         Z: 1.0281806908096769e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.31479713320732117
+      Pitch: 0.24979719519615173
       Target Frame: base_link
-      Yaw: 1.9136072397232056
+      Yaw: 0.633607029914856
     Saved: ~
 Window Geometry:
   Displays:

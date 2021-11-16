@@ -22,7 +22,7 @@ class InspectionEnv:
         self.state_space = generate_state_space(self.camera.stl_cloud, self.camera.camera_home)
         self.ss_tree = KDTree(self.state_space)
         self.state_zero = numpy.array(self.camera.camera_home)
-        self.step = 20
+        self.step = 50
         update_cloud([self.state_zero], self.camera)
         logger.info("Inspection Environment Initialized. Number of states: %d", self.state_space.shape[0])
 
@@ -100,13 +100,14 @@ class InspectionEnv:
             # Increase path density
             exec_path = []
             for i in range(1,flange_path.shape[0]):
-                number_points = math.ceil(numpy.linalg.norm( flange_path[i]-flange_path[i-1] ) / 0.1)
-                if number_points<2:
-                    exec_path.append( flange_path[i-1] )
-                else:
-                    dp = (flange_path[i]-flange_path[i-1]) / number_points
-                    for j in range(number_points):
-                        exec_path.append( flange_path[i-1]+dp*j )
+                exec_path.append( flange_path[i-1] )
+                dist = numpy.linalg.norm( flange_path[i]-flange_path[i-1] )
+                if dist < 0.34:
+                    continue
+                number_points = math.ceil(dist / 0.17)
+                dp = (flange_path[i]-flange_path[i-1]) / number_points
+                for j in range(1,number_points-1):
+                    exec_path.append( flange_path[i-1]+dp*j )
             exec_path = numpy.array(exec_path)
             logger.info("Number of points generated post density increase: %d",exec_path.shape[0])
         else:

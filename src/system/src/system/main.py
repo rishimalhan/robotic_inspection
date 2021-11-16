@@ -52,25 +52,32 @@ def main():
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
-    while not rospy.is_shutdown():
-        rospy.sleep(0.1)
-    sys.exit()
-    exec_path = generate_zigzag(camera.camera_home,transformer)
+    # exec_path = generate_zigzag(camera.camera_home,transformer)
     path = get_pkg_path("system")
-    # plan_path = path + "/database/planned_camera_path.csv"
-    # inspection_env = InspectionEnv(camera)
-    # if "plan" in sys.argv:
-    #     camera_path = inspection_env.greedy_search()
-    #     exec_path = inspection_env.get_executable_path( camera_path )
-    #     numpy.savetxt(plan_path,camera_path,delimiter=",")
-    # else:
-    #     camera_path = numpy.loadtxt(plan_path,delimiter=",")
-    #     exec_path = inspection_env.get_executable_path( camera_path )
+    plan_path = path + "/database/planned_camera_path.csv"
+    inspection_env = InspectionEnv(camera)
+    
+    if "plan" in sys.argv:
+        camera_path = inspection_env.greedy_search()
+        exec_path = inspection_env.get_executable_path( camera_path, increase_density=False )
+        numpy.savetxt(plan_path,camera_path,delimiter=",")
+    else:
+        camera_path = numpy.loadtxt(plan_path,delimiter=",")
+        exec_path = inspection_env.get_executable_path( camera_path, increase_density=False )
+    logger.info("Number of points in path: %d",len(exec_path))
+    import IPython
+    IPython.embed()
+    inspection_bot.execute_greedy_ik(exec_path)
+    sys.exit()
+    viz = Visualizer()
+    viz.axes = exec_path
+    viz.start_visualizer_async()
+
     camera.construct_cloud()
     logger.info("Executing the path")
-    if inspection_bot.execute_cartesian_path(exec_path,vel_scale=0.01) is not None:
+    if inspection_bot.execute_cartesian_path(exec_path,vel_scale=1.0) is not None:
         logger.info("Inspection complete. Writing pointcloud to file and exiting.")
-        constructed_cloud_path = path + "/database/output_cloud.pcd"
+        constructed_cloud_path = path + "/database/output_cloud.ply"
         open3d.io.write_point_cloud(constructed_cloud_path, camera.voxel_grid.get_cloud())
         logger.info("Pointcloud written.")
     else:

@@ -91,8 +91,8 @@ def generate_zigzag(camera_home_,transformer):
     return [state_to_pose(state) for state in flange_path]
 
 def generate_state_space(_cloud, camera_home):
-    max_z_angle = 0.8 # radian
-    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.02))
+    max_z_angle = 3.14 # radian
+    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.04))
     voxelized_cloud.normalize_normals()
     cloud_normals = numpy.asarray(voxelized_cloud.normals)
 
@@ -107,24 +107,26 @@ def generate_state_space(_cloud, camera_home):
     base_T_camera = state_to_matrix(camera_home)
     states = []
     
-    x_rotations = [-0.8, -0.6, -0.3, 0, 0.3, 0.6, 0.8]
-    y_rotations = [-0.8, -0.6, -0.3, 0, 0.3, 0.6, 0.8]
+    x_rotations = [-0.3, 0.0, 0.3]
+    # y_rotations = [-0.3, 0.0, 0.3]
+    y_rotations = [0.0]
     for i,point in enumerate(points):
         matrix = numpy.identity(4)
         matrix[0:3,0] = base_T_camera[0:3,0] # Keep x axis of state same as camera
-        if math.acos(normals[i,2]) > max_z_angle:
-            matrix[0:3,2] = base_T_camera[0:3,2]
-        else:
-            matrix[0:3,2] = -normals[i]
+        # if math.acos(normals[i,2]) > max_z_angle:
+        #     matrix[0:3,2] = base_T_camera[0:3,2]
+        # else:
+        matrix[0:3,2] = -normals[i]
         matrix[0:3,1] = numpy.cross(matrix[0:3,2],matrix[0:3,0])
         point_orientation = matrix_to_state(matrix)[3:6]
         for rotx in x_rotations:
             states.append( numpy.hstack(( point, (point_orientation + [rotx,0,0]) )) )
         for roty in y_rotations:
             states.append( numpy.hstack(( point, (point_orientation + [0,roty,0]) )) )
-    min_bound = voxelized_cloud.get_min_bound() - [0.1,0.1,0.1]
-    max_bound = voxelized_cloud.get_max_bound() + [0.1,0.1,0.1]
     states = numpy.array(states)
+
+    min_bound = voxelized_cloud.get_min_bound() - [0.1,0.3,0.0]
+    max_bound = voxelized_cloud.get_max_bound() + [0.1,0.3,0.0]
     invalid_idx = numpy.hstack(( numpy.where( (states[:,0] < min_bound[0]) |  (states[:,1] < min_bound[1]) )[0],
                                 numpy.where( (states[:,0] > max_bound[0]) |  (states[:,1] > max_bound[1]) )[0] ))
     states = numpy.delete(states,invalid_idx,axis=0)

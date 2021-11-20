@@ -1,7 +1,7 @@
 <launch>
     <param name="move_group/trajectory_execution/allowed_execution_duration_scaling" value="4.0" />
     <param name="move_group/trajectory_execution/execution_duration_monitoring" value="false" />
-
+    
     <!-- The planning and execution components of MoveIt! configured to run -->
     <!-- using the ROS-Industrial interface. -->
 

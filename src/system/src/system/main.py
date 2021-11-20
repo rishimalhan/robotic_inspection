@@ -52,36 +52,44 @@ def main():
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
-    # exec_path = generate_zigzag(camera.camera_home,transformer)
     path = get_pkg_path("system")
     plan_path = path + "/database/planned_camera_path.csv"
-    inspection_env = InspectionEnv(camera)
-    
+    inspection_env = InspectionEnv(inspection_bot, camera, sys.argv)
+
+    logger.info("Generating Global Path")
     if "plan" in sys.argv:
         camera_path = inspection_env.greedy_search()
-        exec_path = inspection_env.get_executable_path( camera_path, increase_density=False )
+        (exec_path, joint_states) = inspection_env.get_executable_path( camera_path )
         numpy.savetxt(plan_path,camera_path,delimiter=",")
     else:
         camera_path = numpy.loadtxt(plan_path,delimiter=",")
-        exec_path = inspection_env.get_executable_path( camera_path, increase_density=False )
+        (exec_path, joint_states) = inspection_env.get_executable_path( camera_path )
     logger.info("Number of points in path: %d",len(exec_path))
-    import IPython
-    IPython.embed()
-    inspection_bot.execute_greedy_ik(exec_path)
-    sys.exit()
+    
     viz = Visualizer()
     viz.axes = exec_path
     viz.start_visualizer_async()
-
+    
     camera.construct_cloud()
     logger.info("Executing the path")
-    if inspection_bot.execute_cartesian_path(exec_path,vel_scale=1.0) is not None:
+    if joint_states is not None:
+        inspection_bot.execute_joint_path(joint_states)
+        rospy.sleep(0.2)
         logger.info("Inspection complete. Writing pointcloud to file and exiting.")
         constructed_cloud_path = path + "/database/output_cloud.ply"
-        open3d.io.write_point_cloud(constructed_cloud_path, camera.voxel_grid.get_cloud())
+        open3d.io.write_point_cloud(constructed_cloud_path, camera.op_cloud)
+        rospy.sleep(0.5)
         logger.info("Pointcloud written.")
     else:
-        logger.warn("Planning failure")
+        logger.info("Planning Failure.")
+
+    # if inspection_bot.execute_cartesian_path(exec_path,vel_scale=1.0) is not None:
+    #     logger.info("Inspection complete. Writing pointcloud to file and exiting.")
+    #     constructed_cloud_path = path + "/database/output_cloud.ply"
+    #     open3d.io.write_point_cloud(constructed_cloud_path, camera.voxel_grid.get_cloud())
+    #     logger.info("Pointcloud written.")
+    # else:
+    #     logger.warn("Planning failure")
 
     # # Check if robot is at home position
     # camera_home_state = [0.207, 0.933, 0.650, 3.14, 0, 0]

@@ -6,3 +6,4 @@ pip3 install open3d
 sudo apt-get install ros-noetic-realsense2-camera
 sudo apt-get install ros-noetic-realsense2-description
 sudo apt-get install ros-noetic-aruco-detect
+sudo apt install ros-noetic-pilz-industrial-motion

@@ -44,13 +44,13 @@ Visualization Manager:
       Class: moveit_rviz_plugin/MotionPlanning
       Enabled: true
       Move Group Namespace: ""
-      MoveIt_Allow_Approximate_IK: false
-      MoveIt_Allow_External_Program: false
-      MoveIt_Allow_Replanning: false
-      MoveIt_Allow_Sensor_Positioning: false
+      MoveIt_Allow_Approximate_IK: true
+      MoveIt_Allow_External_Program: true
+      MoveIt_Allow_Replanning: true
+      MoveIt_Allow_Sensor_Positioning: true
       MoveIt_Planning_Attempts: 10
       MoveIt_Planning_Time: 5
-      MoveIt_Use_Cartesian_Path: false
+      MoveIt_Use_Cartesian_Path: true
       MoveIt_Use_Constraint_Aware_IK: true
       MoveIt_Workspace:
         Center:
@@ -380,8 +380,6 @@ Visualization Manager:
           Value: false
         fiducial_1:
           Value: true
-        fiducial_6:
-          Value: true
         flange:
           Value: false
         link_1:
@@ -422,8 +420,6 @@ Visualization Manager:
                                 camera_color_frame:
                                   camera_color_optical_frame:
                                     fiducial_1:
-                                      {}
-                                    fiducial_6:
                                       {}
                                 camera_depth_frame:
                                   camera_depth_optical_frame:

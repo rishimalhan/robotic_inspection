@@ -13,18 +13,38 @@ import numpy
 import random
 import math
 import sys
+from geometry_msgs.msg import PoseStamped
 logger = logging.getLogger("rosout")
 
 
 class InspectionEnv:
-    def __init__(self, camera):
+    def __init__(self, inspection_bot, camera, flags):
+        self.inspection_bot = inspection_bot
         self.camera = camera
-        self.state_space = generate_state_space(self.camera.stl_cloud, self.camera.camera_home)
-        self.ss_tree = KDTree(self.state_space)
+        self.current_config = self.inspection_bot.move_group.get_current_state().joint_state.position
+        if "plan" in flags:
+            self.state_space = generate_state_space(self.camera.stl_cloud, self.camera.camera_home)
+            # Clear out the unreachable states
+            logger.info("State space created. Number of Points: {0}. Removing invalid points.".format(self.state_space.shape[0]))
+            invalid_indices = []
+            for i,state in enumerate(self.state_space):
+                tool0_pose = state_to_pose( tool0_from_camera(state,camera.transformer) )
+                ik_pose = PoseStamped()
+                ik_pose.header.frame_id = "base_link"
+                ik_pose.pose = tool0_pose
+                response = self.inspection_bot.get_ik.get_ik(ik_pose)
+                if response.error_code.val==1:
+                    if not self.check_ik_validity(response.solution.joint_state.position):
+                        invalid_indices.append(i)
+                else:
+                    invalid_indices.append(i)
+            self.state_space = numpy.delete(self.state_space,invalid_indices,axis=0)
+            self.ss_tree = KDTree(self.state_space)
+            self.step = 20
+            logger.info("Number of states after filtering.".format(self.state_space.shape[0]))
         self.state_zero = numpy.array(self.camera.camera_home)
-        self.step = 50
         update_cloud([self.state_zero], self.camera)
-        logger.info("Inspection Environment Initialized. Number of states: %d", self.state_space.shape[0])
+        logger.info("Inspection Environment Initialized.")
 
     def get_children(self, state, query_number):
         (distance,indices) = self.ss_tree.query( state,query_number[1] )
@@ -94,6 +114,37 @@ class InspectionEnv:
             logger.info("Solution found without complete coverage")
         return numpy.array(path)
     
+    def check_ik_validity(self,joints):
+        inf_norm = numpy.linalg.norm(numpy.array(joints) - numpy.array(self.current_config), ord=numpy.inf)
+        if inf_norm < 2.0:
+            return True
+        else:
+            False
+
+    def get_joint_path(self,waypoints):
+        logger.info("Generating Cspace Path")
+        number_skips = 0
+        max_skips = int(len(waypoints)*0.1)
+        joint_states = []
+        for i,pose in enumerate(waypoints):
+            ik_pose = PoseStamped()
+            ik_pose.header.frame_id = "base_link"
+            ik_pose.pose = pose
+            response = self.inspection_bot.get_ik.get_ik(ik_pose)
+            if response.error_code.val==1:
+                rob_joint_state = response.solution.joint_state
+                if self.check_ik_validity(rob_joint_state.position):
+                    joint_states.append( rob_joint_state )
+                else:
+                    number_skips += 1
+                    if number_skips > max_skips:
+                        return None
+            else:
+                number_skips += 1
+                if number_skips > max_skips:
+                    return None
+        return joint_states
+
     def get_executable_path(self, path, increase_density=False):
         flange_path = numpy.array([tool0_from_camera(pose, self.camera.transformer) for pose in path])
         if increase_density:
@@ -112,4 +163,10 @@ class InspectionEnv:
             logger.info("Number of points generated post density increase: %d",exec_path.shape[0])
         else:
             exec_path = flange_path.tolist()
-        return [state_to_pose(pose) for pose in exec_path]
+
+        waypoints = [state_to_pose(pose) for pose in exec_path]
+        for attempts in range(10):
+            joint_states = self.get_joint_path(waypoints)
+            if joint_states is not None:
+                break
+        return (waypoints, joint_states)

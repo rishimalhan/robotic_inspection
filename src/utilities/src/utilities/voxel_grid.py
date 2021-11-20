@@ -34,7 +34,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         for voxel in self.get_all_voxels():
             self.grid_indices.append(voxel.grid_index)
         self.number_voxels = len(self.grid_indices)
-        self.threshold_obs = 10
+        self.threshold_obs = 4
         self.max_points = self.number_voxels*self.threshold_obs
         self.max_indices = numpy.max(self.grid_indices,axis=0)+1
         self.cg_array = []

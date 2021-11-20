@@ -1,5 +1,8 @@
 #! /usr/bin/python3
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+__metaclass__ = type
+
 import rospy
 import moveit_msgs
 from moveit_commander.robot import RobotCommander
@@ -12,6 +15,7 @@ from geometry_msgs.msg import(
     PoseStamped
 )
 import sys
+import math
 import numpy
 import logging
 from system.planning_utils import (
@@ -27,12 +31,37 @@ from moveit_msgs.msg import (
 )
 from geometry_msgs.msg import Quaternion
 import rosparam
+from moveit_msgs.msg import (
+    RobotState
+)
+from std_msgs.msg import Header
 from .get_fk import GetFK
 from .get_ik import GetIK
+from trajectory_msgs.msg import (
+    JointTrajectory,
+    JointTrajectoryPoint
+)
+from industrial_msgs.srv import CmdJointTrajectory, CmdJointTrajectoryResponse, CmdJointTrajectoryRequest
+from pilz_robot_programming.robot import (
+    Robot,
+    Sequence,
+)
+from pilz_robot_programming.commands import (
+    Ptp
+)
+from moveit_msgs.msg import (
+    MoveGroupSequenceAction,
+    MotionSequenceRequest,
+    MotionSequenceResponse,
+    MotionPlanRequest
+)
+from .move_robot import GoToConfiguration
 logger = logging.getLogger('rosout')
 
 class InspectionBot:
     def __init__(self, apply_orientation_constraint=False):
+        # __REQUIRED_API_VERSION__ = "1"
+        # self.pilz_robot = Robot(__REQUIRED_API_VERSION__)
         self.goal_position = JointState()
         self.goal_pose = Pose()
         self.goal_position.name = ["joint_"+str(i+1) for i in range(6)]
@@ -42,7 +71,8 @@ class InspectionBot:
         self.move_group = MoveGroupCommander(self.group_name)
         self.get_fk = GetFK("tool0", "base_link")
         self.get_ik = GetIK(group=self.group_name, ik_attempts=10, avoid_collisions=True)
-        self.traj_viz = None
+        # self.trajectory_executor = GoToConfiguration()
+        # self.traj_viz = None
 
         if rospy.get_param("/robot_positions/home"):
             self.robot_home = rospy.get_param("/robot_positions/home")
@@ -134,16 +164,14 @@ class InspectionBot:
         return numpy.array(forward_kinematics)
 
     def pose_error(self,joints):
+        import IPython
+        IPython.embed()
         fk = self.get_fk.get_fk(joints)
 
-    def execute_greedy_ik(self,waypoints):
-        for pose in waypoints:
-            ik_pose = PoseStamped()
-            ik_pose.header = "base_link"
-            ik_pose.pose = pose
-            joints = self.get_ik.get_ik(ik_pose)
-            print(joints)
-        pass
+    def execute_joint_path(self,joint_states):
+        for joint_state in joint_states:
+            self.execute( joint_state, vel_scale=0.01 )
+        return True
 
 def bootstrap_system(sim_camera=False):
     # Bootstrap the robot parameters

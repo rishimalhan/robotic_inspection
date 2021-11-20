@@ -42,12 +42,12 @@ class SimCameraModel:
 
     def predict(self,vision_parameters):
         # We multiply error by z_sigma to bring it to max 1 cm. Error is max 1.0 before that
-        return (numpy.mean( numpy.column_stack(
+        return (numpy.average( numpy.column_stack(
                     (100*numpy.power(vision_parameters[:,0],2) - 60*vision_parameters[:,0] + 9,
                     0.01*numpy.exp(9.2*vision_parameters[:,1]),
                     0.01*numpy.exp(1.466*vision_parameters[:,2]))
                 ),
-                axis=1 ), numpy.ones(vision_parameters.shape[0],) * self.accuracy_sigma )
+                axis=1, weights=numpy.array([0.2,0.2,0.6]) ), numpy.ones(vision_parameters.shape[0],) * self.accuracy_sigma )
 
 class Camera:
     def __init__(self, inspection_bot, transformer, camera_properties, flags):
@@ -148,7 +148,7 @@ class Camera:
         (transform,_,_) = self.get_current_transform()
         open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
         open3d_cloud = open3d_cloud.transform(transform)
-        open3d_cloud = open3d_cloud.crop(self.bbox)
+        # open3d_cloud = open3d_cloud.crop(self.bbox)
         if filters:
             points = numpy.asarray(open3d_cloud.points)
             distances = numpy.linalg.norm(points-transform[0:3,3],axis=1)
@@ -194,8 +194,8 @@ class Camera:
         axbbox = open3d.geometry.AxisAlignedBoundingBox()
         # axbbox.min_bound = numpy.array([ -0.2,-0.2, 0.25 ])
         # axbbox.max_bound = numpy.array([ 0.2,0.2, 0.35 ])
-        axbbox.min_bound = numpy.array([ -0.07,-0.07, 0.3 ])
-        axbbox.max_bound = numpy.array([ 0.07,0.07, 0.5 ])
+        axbbox.min_bound = numpy.array([ -0.05,-0.05, 0.3 ])
+        axbbox.max_bound = numpy.array([ 0.05,0.05, 0.4 ])
         fov = open3d.geometry.OrientedBoundingBox().create_from_axis_aligned_bounding_box(axbbox)
         fov.center = base_T_camera[0:3,3] + 0.3*base_T_camera[0:3,2]
         visible_cloud = self.stl_cloud.crop(fov)
@@ -230,7 +230,8 @@ class Camera:
         while not rospy.is_shutdown():
             # -- Convert open3d_cloud to ros_cloud, and publish. Until the subscribe receives it.
             self.stl_cloud_pub.publish(convertCloudFromOpen3dToRos(self.stl_cloud, frame_id="base"))
-            self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.voxel_grid.get_cloud(), frame_id="base"))
+            self.op_cloud = self.voxel_grid.get_cloud()
+            self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.op_cloud, frame_id="base"))
             # open3d_cloud = self.trigger_camera(filters=False)
             # open3d_cloud = self.get_simulated_cloud()[0]
             # self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(open3d_cloud, frame_id="base"))

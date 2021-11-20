@@ -24,7 +24,7 @@ class GetFK(object):
         rospy.loginfo("Asking forward kinematics for link: " + self.fk_link)
         rospy.loginfo("PoseStamped answers will be on frame: " + self.frame_id)
         self.fk_srv = rospy.ServiceProxy('/compute_fk',
-                                         GetPositionFK)
+                                         GetPositionFK, persistent=True)
         rospy.loginfo("Waiting for /compute_fk service...")
         self.fk_srv.wait_for_service()
         rospy.loginfo("Connected!")

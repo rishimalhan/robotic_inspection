@@ -34,7 +34,7 @@ class GetIK(object):
         rospy.loginfo("Setting avoid collisions to: " +
                       str(self.avoid_collisions))
         self.ik_srv = rospy.ServiceProxy('/compute_ik',
-                                         GetPositionIK)
+                                         GetPositionIK, persistent=True)
         rospy.loginfo("Waiting for /compute_ik service...")
         self.ik_srv.wait_for_service()
         rospy.loginfo("Connected!")

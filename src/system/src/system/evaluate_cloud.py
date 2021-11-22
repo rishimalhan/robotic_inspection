@@ -13,14 +13,17 @@ from utilities.filesystem_utils import (
     get_pkg_path,
 )
 
-gen_ref_cloud = True
+gen_ref_cloud = False
 gen_measured_cloud = True
+use_online_cloud = True
+save_clouds = True
 
-# part = "partA"
-part = "partB"
+part = "partA"
+# part = "partB"
 
 pkg_path = get_pkg_path("system")
 cloud_path = pkg_path + "/database/" + part + "/" + part + ".ply"
+online_cloud_path = pkg_path + "/database/" + part + "/" + "online.ply"
 part_tf_file = pkg_path + "/database/" + part + "/" + "part_tf.csv"
 part_tf = numpy.loadtxt(part_tf_file,delimiter=",")
 
@@ -36,8 +39,9 @@ if gen_ref_cloud:
     # Point cloud of STL surface only
     filters = rospy.get_param("/stl_params").get("filters")
     stl_cloud = mesh.sample_points_poisson_disk(number_of_points=20000)
-    logger.info("Writing reference pointcloud to file")
-    open3d.io.write_point_cloud(pkg_path+"/database/"+part+"/"+"reference.ply", stl_cloud)
+    if save_clouds:
+        logger.info("Writing reference pointcloud to file")
+        open3d.io.write_point_cloud(pkg_path+"/database/"+part+"/"+"reference.ply", stl_cloud)
     logger.info("Written")
 
 # Read the reference cloud
@@ -46,14 +50,30 @@ reference = reference.voxel_down_sample(voxel_size=0.005)
 print("Reference cloud # points: ", reference)
 
 if gen_measured_cloud:
-    # Apply uncertainty average to the points
     cloud = open3d.io.read_point_cloud(cloud_path)
-    print("Measured cloud # points: ", cloud)
+    print("Cloud # points: ", cloud)
+    if use_online_cloud:
+        online_cloud = open3d.io.read_point_cloud(online_cloud_path)
+        points = numpy.append(numpy.asarray(cloud.points),numpy.asarray(online_cloud.points),axis=0)
+        cloud = open3d.geometry.PointCloud()
+        cloud.points = open3d.utility.Vector3dVector(points)
+        cloud.colors = open3d.utility.Vector3dVector( 
+                        numpy.ones(numpy.asarray(cloud.points).shape)*[0.447,0.62,0.811])
+        print("Cloud after online merging # points: ", cloud)
+    # ICP
+    reg_p2p = open3d.pipelines.registration.registration_icp(
+        source=cloud.voxel_down_sample(voxel_size=0.005), target=reference, max_correspondence_distance=1e-3, init=numpy.identity(4))
+    logger.info("ICP transform: \n{0}".format(reg_p2p.transformation))
+    cloud = cloud.voxel_down_sample(voxel_size=0.001)
+    print("Cloud after down sampling # points: ", cloud)
+    cloud = cloud.transform(reg_p2p.transformation)
+
+    # Apply uncertainty average to the points
     cloud.estimate_normals()
     cloud.normalize_normals()
     points = numpy.asarray(reference.points)
     normals = numpy.asarray(reference.normals)
-    final_cloud = []
+    averaged_points = []
     logger.info("Generating the measured cloud")
     for i in range(points.shape[0]):
         matrix = numpy.identity(4)
@@ -63,18 +83,25 @@ if gen_measured_cloud:
         bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.002,0.002,0.01])
         nugget = numpy.asarray(cloud.crop(bbox).points)
         if nugget.shape[0] > 0:
-            final_cloud.append(numpy.average(nugget,axis=0))
-    final_cloud = numpy.array(final_cloud)
+            averaged_points.append(numpy.average(nugget,axis=0))
+    averaged_points = numpy.array(averaged_points)
     measured_cloud = open3d.geometry.PointCloud()
-    measured_cloud.points = open3d.utility.Vector3dVector(final_cloud)
+    measured_cloud.points = open3d.utility.Vector3dVector(averaged_points)
     measured_cloud.colors = open3d.utility.Vector3dVector( 
-                        numpy.ones(final_cloud.shape)*[0.447,0.62,0.811])
-    logger.info("Generated. Writing the measured cloud to file")
-    open3d.io.write_point_cloud(pkg_path + "/database/" + part + "/" + "measured_cloud.ply", measured_cloud)
+                        numpy.ones(averaged_points.shape)*[0.447,0.62,0.811])
+    if save_clouds:
+        logger.info("Generated. Writing the measured cloud to file")
+        if use_online_cloud:
+            open3d.io.write_point_cloud(pkg_path + "/database/" + part + "/" + "constructed_output.ply", measured_cloud)
+        else:
+            open3d.io.write_point_cloud(pkg_path + "/database/" + part + "/" + "measured_cloud.ply", measured_cloud)
 
 # Read the measured cloud
 logger.info("Reading the measured cloud")
-measured_cloud = open3d.io.read_point_cloud(pkg_path+"/database/"+part+"/"+"measured_cloud.ply")
+if use_online_cloud:
+    measured_cloud = open3d.io.read_point_cloud(pkg_path+"/database/"+part+"/"+"constructed_output.ply")
+else:
+    measured_cloud = open3d.io.read_point_cloud(pkg_path+"/database/"+part+"/"+"measured_cloud.ply")
 print("Measured cloud # points: ", measured_cloud)
 
 logger.info("ICP")

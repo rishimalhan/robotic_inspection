@@ -13,13 +13,14 @@ from utilities.filesystem_utils import (
     get_pkg_path,
 )
 
-gen_ref_cloud = False
+gen_ref_cloud = True
 gen_measured_cloud = True
 use_online_cloud = True
 save_clouds = True
 
 part = "partA"
 # part = "partB"
+part = "partC"
 
 pkg_path = get_pkg_path("system")
 cloud_path = pkg_path + "/database/" + part + "/" + part + ".ply"
@@ -38,15 +39,16 @@ if gen_ref_cloud:
     mesh = mesh.transform(state_to_matrix(part_tf))
     # Point cloud of STL surface only
     filters = rospy.get_param("/stl_params").get("filters")
-    stl_cloud = mesh.sample_points_poisson_disk(number_of_points=20000)
+    stl_cloud = mesh.sample_points_poisson_disk(number_of_points=50000)
     if save_clouds:
         logger.info("Writing reference pointcloud to file")
         open3d.io.write_point_cloud(pkg_path+"/database/"+part+"/"+"reference.ply", stl_cloud)
     logger.info("Written")
+    sys.exit()
 
 # Read the reference cloud
 reference = open3d.io.read_point_cloud(pkg_path+"/database/"+part+"/"+"reference.ply")
-reference = reference.voxel_down_sample(voxel_size=0.005)
+reference = reference.voxel_down_sample(voxel_size=0.001)
 print("Reference cloud # points: ", reference)
 
 if gen_measured_cloud:
@@ -64,7 +66,7 @@ if gen_measured_cloud:
     reg_p2p = open3d.pipelines.registration.registration_icp(
         source=cloud.voxel_down_sample(voxel_size=0.005), target=reference, max_correspondence_distance=1e-3, init=numpy.identity(4))
     logger.info("ICP transform: \n{0}".format(reg_p2p.transformation))
-    cloud = cloud.voxel_down_sample(voxel_size=0.001)
+    cloud = cloud.voxel_down_sample(voxel_size=0.0005)
     print("Cloud after down sampling # points: ", cloud)
     cloud = cloud.transform(reg_p2p.transformation)
 
@@ -80,7 +82,7 @@ if gen_measured_cloud:
         matrix[0:3,2] = normals[i]
         matrix[0:3,0] = [1,0,0]
         matrix[0:3,1] = numpy.cross(matrix[0:3,2],matrix[0:3,0])
-        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.002,0.002,0.01])
+        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.0015,0.0015,0.01])
         nugget = numpy.asarray(cloud.crop(bbox).points)
         if nugget.shape[0] > 0:
             averaged_points.append(numpy.average(nugget,axis=0))

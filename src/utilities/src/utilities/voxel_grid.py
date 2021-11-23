@@ -19,7 +19,7 @@ class Voxel:
         if len(self.points)==1:
             self.cg = self.points[0].tolist()
             return
-        self.points = self.reject_outliers(self.points)
+        # self.points = self.reject_outliers(self.points)
         self.cg = numpy.average(self.points,axis=0).tolist()
         return
 
@@ -29,7 +29,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         cloud = open3d.geometry.PointCloud()
         cloud.points = open3d.utility.Vector3dVector(points)
         cloud.colors = open3d.utility.Vector3dVector(numpy.ones(points.shape)*[0,0,1])
-        self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.01)
+        self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.0005)
         self.grid_indices = []
         for voxel in self.get_all_voxels():
             self.grid_indices.append(voxel.grid_index)

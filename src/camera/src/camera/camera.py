@@ -119,7 +119,7 @@ class Camera:
 
         # Point cloud of STL surface only
         filters = rospy.get_param("/stl_params").get("filters")
-        self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=10000)
+        self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=20000)
         dot_products = numpy.asarray(self.stl_cloud.normals)[:,2]
         dot_products[numpy.where(dot_products>1)[0]] = 1
         dot_products[numpy.where(dot_products<-1)[0]] = -1
@@ -244,7 +244,7 @@ class Camera:
 
     def update_cloud_once(self):
         (cloud,base_T_camera) = self.trigger_camera()
-        cloud = cloud.voxel_down_sample(voxel_size=0.001)
+        cloud = cloud.voxel_down_sample(voxel_size=0.0005)
         if not cloud.is_empty():
             cloud.estimate_normals()
             cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
@@ -256,7 +256,7 @@ class Camera:
     def update_cloud(self):
         while not rospy.is_shutdown():
             (cloud,base_T_camera) = self.trigger_camera(filters=False)
-            cloud = cloud.voxel_down_sample(voxel_size=0.001)
+            cloud = cloud.voxel_down_sample(voxel_size=0.0005)
             if not cloud.is_empty():
                 cloud.estimate_normals()
                 cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])

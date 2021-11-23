@@ -144,8 +144,9 @@ class Camera:
 
             logger.info("Writing reference pointcloud to file")
             open3d.io.write_point_cloud(ref_path, self.stl_cloud)
-
-        self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.stl_cloud.points), sim=True)
+        # Cloud to be used for simulations
+        self.sim_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.01)
+        self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.sim_cloud.points), sim=True)
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points),create_from_bounds=True)
         self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
         (base_T_camera,_,_) = self.get_current_transform()
@@ -153,7 +154,6 @@ class Camera:
         self.camera_home = numpy.hstack(( matrix_to_state(part_transform)[0:3] + numpy.array([0,0,0.3]),
                                         current_orientation
                                         ))
-        self.sim_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.01)
         self.publish_cloud()
 
     def get_current_transform(self):
@@ -222,7 +222,7 @@ class Camera:
         visible_cloud.estimate_normals()
         visible_cloud.normalize_normals()
         visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
-
+        
         (heatmap,_) = get_heatmap(visible_cloud, base_T_camera, self.camera_model, vision_parameters=None)
         visible_cloud = visible_cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
 

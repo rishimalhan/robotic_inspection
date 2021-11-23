@@ -21,6 +21,12 @@ from utilities.filesystem_utils import (
 )
 logger = logging.getLogger("rosout")
 
+import rospy
+from sensor_msgs.msg import PointCloud2
+from utilities.open3d_and_ros import (
+    convertCloudFromOpen3dToRos,
+    convertCloudFromRosToOpen3d
+)
 
 class InspectionEnv:
     def __init__(self, inspection_bot, camera, flags):
@@ -57,7 +63,10 @@ class InspectionEnv:
         self.state_zero = numpy.array(self.camera.camera_home)
         (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_zero))
         self.camera.voxel_grid_sim.update_grid(cloud)
+        self.visible_cloud_pub = rospy.Publisher("visible_cloud", PointCloud2, queue_size=10)
+        self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(cloud, frame_id="base"))
         logger.info("Inspection Environment Initialized. Initial coverage: {0}".format(self.camera.voxel_grid_sim.get_coverage()))
+        sys.exit()
 
     def get_children(self, state, query_number):
         (distance,indices) = self.ss_tree.query( state,query_number[1] )
@@ -72,16 +81,13 @@ class InspectionEnv:
             return None
         child_state = None
         rewards = numpy.array([])
+        init_coverage = self.camera.voxel_grid_sim.get_coverage()
         for child in children:
-            if child in self.stored_obs:
-                new_obs = self.stored_obs[child]
-            else:
-                (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
-                self.camera.voxel_grid_sim.update_grid(cloud)
-                new_obs = self.camera.voxel_grid_sim.new_obs
-                self.stored_obs[child] = new_obs
-                self.camera.voxel_grid_sim.devolve_grid(cloud)
-            rate_gain = numpy.sum(new_obs) / numpy.linalg.norm( self.state_space[child]-parent )
+            (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
+            self.camera.voxel_grid_sim.update_grid(cloud)
+            coverage = self.camera.voxel_grid_sim.get_coverage() - init_coverage
+            self.camera.voxel_grid_sim.devolve_grid(cloud)
+            rate_gain = coverage / numpy.linalg.norm( self.state_space[child]-parent )
             rewards = numpy.append( rewards, rate_gain )
         if numpy.any(rewards>0):
             child = children[numpy.argmax(rewards)]

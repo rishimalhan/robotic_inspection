@@ -1,6 +1,8 @@
 import numpy
 import open3d
 import sys
+import logging
+logger = logging.getLogger("rosout")
 
 class Voxel:
     def __init__(self):
@@ -19,6 +21,9 @@ class Voxel:
         if len(self.points)==1:
             self.cg = self.points[0].tolist()
             return
+        if len(self.points)>100:
+            self.points = self.points[-100:]
+
         # self.points = self.reject_outliers(self.points)
         self.cg = numpy.average(self.points,axis=0).tolist()
         return
@@ -50,6 +55,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         for voxel in self.get_all_voxels():
             self.grid_indices.append(voxel.grid_index)
         self.number_voxels = len(self.grid_indices)
+        logger.info("Number of points: {0}. Number of Voxels: {1}.".format(numpy.asarray(cloud.points).shape[0], self.number_voxels))
         self.threshold_obs = 1
         self.max_points = self.number_voxels*self.threshold_obs
         self.max_indices = numpy.max(self.grid_indices,axis=0)+1
@@ -57,15 +63,20 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         self.cloud = open3d.geometry.PointCloud()
         self.reset()
 
+    def get_valid_points(self,cloud):
+        valid_indices = numpy.where(self.voxel_grid.check_if_included(cloud.points))[0]
+        return numpy.asarray(cloud.points)[valid_indices]
+
     def devolve_grid(self,cloud):
-        points = numpy.asarray(cloud.points)
+        points = self.get_valid_points(cloud)
         for point in points:
             index = self.voxel_grid.get_voxel(point)
             self.number_observations[index[0],index[1],index[2]] -= 1
 
     def update_grid(self,cloud):
-        valid_indices = numpy.where(self.voxel_grid.check_if_included(cloud.points))[0]
-        points = numpy.asarray(cloud.points)[valid_indices]
+        self.new_obs = numpy.zeros(shape=(self.max_indices[0],
+                                    self.max_indices[1],self.max_indices[2]),dtype=int)
+        points = self.get_valid_points(cloud)
         for point in points:
             index = self.voxel_grid.get_voxel(point)
             
@@ -77,8 +88,6 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
                 self.voxels[index[0],index[1],index[2]].add_point(point)
                 self.cg_array.append(self.voxels[index[0],index[1],index[2]].cg)
             else:
-                self.new_obs = numpy.zeros(shape=(self.max_indices[0],
-                                    self.max_indices[1],self.max_indices[2]),dtype=int)
                 self.number_observations[index[0],index[1],index[2]] += 1
                 if self.number_observations[index[0],index[1],index[2]]<=self.threshold_obs:
                     self.new_obs[index[0],index[1],index[2]] += 1

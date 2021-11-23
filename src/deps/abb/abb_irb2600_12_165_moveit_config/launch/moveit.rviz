@@ -4,7 +4,6 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /MotionPlanning1/Scene Geometry1
         - /TF1/Frames1
       Splitter Ratio: 0.5170649886131287
     Tree Height: 309
@@ -378,8 +377,6 @@ Visualization Manager:
           Value: false
         camera_usb_plug_link:
           Value: false
-        fiducial_5:
-          Value: true
         flange:
           Value: false
         link_1:
@@ -419,8 +416,7 @@ Visualization Manager:
                               camera_link:
                                 camera_color_frame:
                                   camera_color_optical_frame:
-                                    fiducial_5:
-                                      {}
+                                    {}
                                 camera_depth_frame:
                                   camera_depth_optical_frame:
                                     {}

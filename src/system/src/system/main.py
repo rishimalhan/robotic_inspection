@@ -72,6 +72,11 @@ def main():
     viz.start_visualizer_async()
     
     camera.construct_cloud()
+    while not rospy.is_shutdown():
+        rospy.sleep(0.1)
+    online_cloud_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/online.ply"
+    open3d.io.write_point_cloud(online_cloud_path, camera.op_cloud)
+    sys.exit()
     logger.info("Executing the path")
     if joint_states is not None:
         inspection_bot.execute_joint_path(joint_states)

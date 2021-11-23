@@ -24,15 +24,17 @@ stl_params:
   
   # name: "partB"
   # directory_path: "/database/meshes"
-  # compensation: [0.0, 0.0, 0.0] # Aruco compensation wrt base frame
-  
-  name: "partB"
-  directory_path: "/database/meshes"
-  compensation: [0.023, -0.022, 0.0] # Aruco compensation wrt base frame
+  # compensation: [0.023, -0.022, 0.0] # Aruco compensation wrt base frame
   
   # name: "partC"
   # directory_path: "/database/meshes"
   # compensation: [0.0, 0.0, 0.0] # Aruco compensation wrt base frame
+
+  name: "partD"
+  directory_path: "/database/meshes"
+  compensation: [0.02, -0.02, 0.0] # Aruco compensation wrt base frame
+  filters:
+    truncate_below_z: -0.012
 
 # Collision box
 # position is x, y, z

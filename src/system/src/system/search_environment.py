@@ -13,6 +13,7 @@ import numpy
 import random
 import math
 import sys
+from sensor_msgs.msg import PointCloud2
 import rosparam
 from geometry_msgs.msg import PoseStamped
 from utilities.filesystem_utils import (
@@ -85,7 +86,7 @@ class InspectionEnv:
         if numpy.any(rewards>0):
             child = children[numpy.argmax(rewards)]
             child_state = self.state_space[child]
-            (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(child_state))
+            (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
             self.camera.voxel_grid_sim.update_grid(cloud)
         if numpy.any(rewards<0):
             logger.warn("Rewards are negative. Potential bug")

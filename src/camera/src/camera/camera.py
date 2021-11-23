@@ -129,11 +129,19 @@ class Camera:
             self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=100000)
             self.stl_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.001)
             if filters is not None:
+                logger.info("Applying filters")
                 dot_products = numpy.asarray(self.stl_cloud.normals)[:,2]
                 dot_products[numpy.where(dot_products>1)[0]] = 1
                 dot_products[numpy.where(dot_products<-1)[0]] = -1    
-                surface_indices = numpy.where( numpy.arccos(dot_products) < filters.get("max_angle_with_normal") )[0]
-                self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
+                if filters.get("max_angle_with_normal") is not None:
+                    logger.info("Normal orientation filter")
+                    surface_indices = numpy.where( numpy.arccos(dot_products) < filters.get("max_angle_with_normal") )[0]
+                    self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
+                if filters.get("truncate_below_z") is not None:
+                    logger.info("Allowed Z values filter")
+                    surface_indices = numpy.where( numpy.asarray(self.stl_cloud.points)[:,2] >= part_transform[2,3]+filters.get("truncate_below_z") )[0]
+                    self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
+
             logger.info("Writing reference pointcloud to file")
             open3d.io.write_point_cloud(ref_path, self.stl_cloud)
 

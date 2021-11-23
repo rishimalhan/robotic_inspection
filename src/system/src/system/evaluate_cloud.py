@@ -16,7 +16,7 @@ from utilities.filesystem_utils import (
 
 gen_ref_cloud = False
 gen_measured_cloud = True
-use_online_cloud = False
+use_online_cloud = True
 save_clouds = True
 
 # part = "partA"
@@ -47,7 +47,7 @@ if gen_measured_cloud:
         print("Cloud after online merging # points: ", cloud)
     # ICP
     reg_p2p = open3d.pipelines.registration.registration_icp(
-        source=cloud.voxel_down_sample(voxel_size=0.005), target=reference, max_correspondence_distance=1e-5, init=numpy.identity(4))
+        source=cloud.voxel_down_sample(voxel_size=0.005), target=reference, max_correspondence_distance=1e-3, init=numpy.identity(4))
     logger.info("ICP transform: \n{0}".format(reg_p2p.transformation))
     cloud = cloud.voxel_down_sample(voxel_size=0.0005)
     print("Cloud after down sampling # points: ", cloud)
@@ -93,7 +93,7 @@ logger.info("ICP")
 # Generate color map
 # ICP
 reg_p2p = open3d.pipelines.registration.registration_icp(
-    source=measured_cloud, target=reference, max_correspondence_distance=1e-5, init=numpy.identity(4))
+    source=measured_cloud, target=reference, max_correspondence_distance=1e-3, init=numpy.identity(4))
 logger.info("ICP transform: \n{0}".format(reg_p2p.transformation))
 measured_cloud = measured_cloud.transform(reg_p2p.transformation)
 

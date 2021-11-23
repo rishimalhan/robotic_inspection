@@ -338,7 +338,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.003000000026077032
+      Size (m): 0.0010000000474974513
       Style: Spheres
       Topic: stl_cloud
       Unreliable: false
@@ -378,7 +378,7 @@ Visualization Manager:
           Value: false
         camera_usb_plug_link:
           Value: false
-        fiducial_1:
+        fiducial_5:
           Value: true
         flange:
           Value: false
@@ -419,7 +419,7 @@ Visualization Manager:
                               camera_link:
                                 camera_color_frame:
                                   camera_color_optical_frame:
-                                    fiducial_1:
+                                    fiducial_5:
                                       {}
                                 camera_depth_frame:
                                   camera_depth_optical_frame:
@@ -472,7 +472,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 114; 159; 207
-      Color Transformer: RGB8
+      Color Transformer: Intensity
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false

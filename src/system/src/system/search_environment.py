@@ -13,38 +13,50 @@ import numpy
 import random
 import math
 import sys
+import rosparam
 from geometry_msgs.msg import PoseStamped
+from utilities.filesystem_utils import (
+    get_pkg_path,
+)
 logger = logging.getLogger("rosout")
 
 
 class InspectionEnv:
     def __init__(self, inspection_bot, camera, flags):
+        check_ik = False
         self.inspection_bot = inspection_bot
         self.camera = camera
         self.current_config = self.inspection_bot.move_group.get_current_state().joint_state.position
         if "plan" in flags:
             self.state_space = generate_state_space(self.camera.stl_cloud, self.camera.camera_home)
-            # Clear out the unreachable states
-            logger.info("State space created. Number of Points: {0}. Removing invalid points.".format(self.state_space.shape[0]))
-            invalid_indices = []
-            for i,state in enumerate(self.state_space):
-                tool0_pose = state_to_pose( tool0_from_camera(state,camera.transformer) )
-                ik_pose = PoseStamped()
-                ik_pose.header.frame_id = "base_link"
-                ik_pose.pose = tool0_pose
-                response = self.inspection_bot.get_ik.get_ik(ik_pose)
-                if response.error_code.val==1:
-                    if not self.check_ik_validity(response.solution.joint_state.position):
+            path = get_pkg_path("system")
+            state_space_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/state_space.csv"
+            if check_ik:
+                # Clear out the unreachable states
+                logger.info("State space created. Number of Points: {0}. Removing invalid points.".format(self.state_space.shape[0]))
+                invalid_indices = []
+                for i,state in enumerate(self.state_space):
+                    tool0_pose = state_to_pose( tool0_from_camera(state,camera.transformer) )
+                    ik_pose = PoseStamped()
+                    ik_pose.header.frame_id = "base_link"
+                    ik_pose.pose = tool0_pose
+                    response = self.inspection_bot.get_ik.get_ik(ik_pose)
+                    if response.error_code.val==1:
+                        if not self.check_ik_validity(response.solution.joint_state.position):
+                            invalid_indices.append(i)
+                    else:
                         invalid_indices.append(i)
-                else:
-                    invalid_indices.append(i)
-            self.state_space = numpy.delete(self.state_space,invalid_indices,axis=0)
+                self.state_space = numpy.delete(self.state_space,invalid_indices,axis=0)
+                numpy.savetxt(state_space_path,self.state_space,delimiter=",")
+            else:
+                self.state_space = numpy.loadtxt(state_space_path,delimiter=",")
             self.ss_tree = KDTree(self.state_space)
             self.step = 20
-            logger.info("Number of states after filtering.".format(self.state_space.shape[0]))
+            logger.info("Number of states after filtering. {0}".format(self.state_space.shape[0]))
         self.state_zero = numpy.array(self.camera.camera_home)
-        update_cloud([self.state_zero], self.camera)
-        logger.info("Inspection Environment Initialized.")
+        (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_zero))
+        self.camera.voxel_grid_sim.update_grid(cloud)
+        logger.info("Inspection Environment Initialized. Initial coverage: {0}".format(self.camera.voxel_grid_sim.get_coverage()))
 
     def get_children(self, state, query_number):
         (distance,indices) = self.ss_tree.query( state,query_number[1] )
@@ -85,6 +97,7 @@ class InspectionEnv:
         self.stored_obs = {}
         path = [self.state_zero]
         stopping_condition = False
+        logger.info("Planning using greedy search")
         while not stopping_condition:
             query_number = [0,self.step]
             child_state = None
@@ -102,12 +115,13 @@ class InspectionEnv:
             if child_state is not None:
                 coverage = self.camera.voxel_grid_sim.get_coverage()
                 path.append(child_state)
-                if coverage > 0.98:
+                if coverage > 0.9:
                     stopping_condition = True
-                logger.info("Coverage: {0}".format(coverage))
+                logger.info("Coverage: {0:.2f}. States: Visited: {1}. Remaining: {2}".format(coverage, len(self.visited_states),
+                                                            self.state_space.shape[0]-len(self.visited_states)))
             else:
                 stopping_condition = True
-        if coverage > 0.98:
+        if coverage > 0.9:
             logger.info("Solution found with {0} points and {1} coverage"
                             .format(len(path),self.camera.voxel_grid_sim.get_coverage()))
         else:

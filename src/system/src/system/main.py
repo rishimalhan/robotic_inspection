@@ -51,10 +51,10 @@ def main():
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
-    sys.exit()
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
+    
     path = get_pkg_path("system")
-    plan_path = path + "/database/planned_camera_path.csv"
+    plan_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/planned_camera_path.csv"
     inspection_env = InspectionEnv(inspection_bot, camera, sys.argv)
 
     logger.info("Generating Global Path")
@@ -77,7 +77,7 @@ def main():
         inspection_bot.execute_joint_path(joint_states)
         rospy.sleep(0.2)
         logger.info("Inspection complete. Writing pointcloud to file and exiting.")
-        constructed_cloud_path = path + "/database/output_cloud.ply"
+        constructed_cloud_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/" + rosparam.get_param("/stl_params/name") + ".ply"
         open3d.io.write_point_cloud(constructed_cloud_path, camera.op_cloud)
         rospy.sleep(0.5)
         logger.info("Pointcloud written.")

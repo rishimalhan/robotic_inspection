@@ -6,6 +6,7 @@ import rosparam
 import logging
 import threading
 import rospy
+from os.path import exists
 from system.planning_utils import matrix_to_state
 from system.planning_utils import tf_to_matrix
 import tf
@@ -56,7 +57,7 @@ class Camera:
         self.camera_properties = camera_properties
         self.inspection_bot = inspection_bot
         self.transformer = transformer
-        self.heatmap_threshold = 0.2
+        self.heatmap_threshold = 0.3
         path = get_pkg_path("system")
         # Scan the workspace boundary
         self.bbox_path = path + "/database/bbox.csv"
@@ -91,7 +92,7 @@ class Camera:
         logger.info("Localizer transform: {0}.".format(self.localizer_tf))
         
         # Scan the part for coarse approximation
-        part_tf_path = path + "/database/part_tf.csv"
+        part_tf_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/part_tf.csv"
         if "part_tf" in flags:
             stl_param = rospy.get_param("/stl_params")
             part_frame = numpy.array(stl_param.get("aruco_frame"))
@@ -105,27 +106,37 @@ class Camera:
             # Hard coding!
             part_transform[3:6] = [0,0,1.57]
             part_transform = state_to_matrix( part_transform )
-            part_transform[0:3,3] += rosparam.get_param("/stl_params/compensation")
             numpy.savetxt(part_tf_path,matrix_to_state(part_transform),delimiter=",")
+            part_transform[0:3,3] += rosparam.get_param("/stl_params/compensation")
         else:
             part_transform = state_to_matrix( numpy.loadtxt(part_tf_path,delimiter=",") )
+            part_transform[0:3,3] += rosparam.get_param("/stl_params/compensation")
             
-        stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
-                            "/" + rosparam.get_param("/stl_params/name") + ".stl"
-        logger.info("Reading stl. Path: {0}".format(stl_path))
-        self.mesh = open3d.io.read_triangle_mesh(stl_path)
-        logger.info("Stl read. Generating PointCloud from stl")
-        self.mesh = self.mesh.transform(part_transform)
+        ref_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/reference.ply"
+        if exists(ref_path):
+            logger.info("Reference cloud found. Reading existing file.")
+            self.stl_cloud = open3d.io.read_point_cloud(ref_path)
+        else:
+            stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
+                                "/" + rosparam.get_param("/stl_params/name") + ".stl"
+            logger.info("Reading stl. Path: {0}".format(stl_path))
+            self.mesh = open3d.io.read_triangle_mesh(stl_path)
+            logger.info("Stl read. Generating PointCloud from stl")
+            self.mesh = self.mesh.transform(part_transform)
+            
+            # Point cloud of STL surface only
+            filters = rospy.get_param("/stl_params").get("filters")
+            self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=100000)
+            self.stl_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.001)
+            if filters is not None:
+                dot_products = numpy.asarray(self.stl_cloud.normals)[:,2]
+                dot_products[numpy.where(dot_products>1)[0]] = 1
+                dot_products[numpy.where(dot_products<-1)[0]] = -1    
+                surface_indices = numpy.where( numpy.arccos(dot_products) < filters.get("max_angle_with_normal") )[0]
+                self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
+            logger.info("Writing reference pointcloud to file")
+            open3d.io.write_point_cloud(ref_path, self.stl_cloud)
 
-        # Point cloud of STL surface only
-        filters = rospy.get_param("/stl_params").get("filters")
-        self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=20000)
-        dot_products = numpy.asarray(self.stl_cloud.normals)[:,2]
-        dot_products[numpy.where(dot_products>1)[0]] = 1
-        dot_products[numpy.where(dot_products<-1)[0]] = -1
-        surface_indices = numpy.where( numpy.arccos(dot_products) < filters.get("max_angle_with_normal") )[0]
-        self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
-        
         self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.stl_cloud.points), sim=True)
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points),create_from_bounds=True)
         self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
@@ -134,6 +145,7 @@ class Camera:
         self.camera_home = numpy.hstack(( matrix_to_state(part_transform)[0:3] + numpy.array([0,0,0.3]),
                                         current_orientation
                                         ))
+        self.sim_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.01)
         self.publish_cloud()
 
     def get_current_transform(self):
@@ -192,13 +204,11 @@ class Camera:
         # Make the cube bounding box as the field of view
         # Bounding box to crop pointcloud that the camera sees wrt depth optical frame
         axbbox = open3d.geometry.AxisAlignedBoundingBox()
-        # axbbox.min_bound = numpy.array([ -0.2,-0.2, 0.25 ])
-        # axbbox.max_bound = numpy.array([ 0.2,0.2, 0.35 ])
-        axbbox.min_bound = numpy.array([ -0.05,-0.05, 0.3 ])
-        axbbox.max_bound = numpy.array([ 0.05,0.05, 0.4 ])
+        axbbox.min_bound = numpy.array([ -0.05, -0.05, 0.25 ])
+        axbbox.max_bound = numpy.array([ 0.05, 0.05, 0.45 ])
         fov = open3d.geometry.OrientedBoundingBox().create_from_axis_aligned_bounding_box(axbbox)
         fov.center = base_T_camera[0:3,3] + 0.3*base_T_camera[0:3,2]
-        visible_cloud = self.stl_cloud.crop(fov)
+        visible_cloud = self.sim_cloud.crop(fov)
         if visible_cloud.is_empty():
             return (visible_cloud,base_T_camera)
         visible_cloud.estimate_normals()
@@ -256,15 +266,16 @@ class Camera:
     def update_cloud(self):
         while not rospy.is_shutdown():
             (cloud,base_T_camera) = self.trigger_camera(filters=False)
-            cloud = cloud.voxel_down_sample(voxel_size=0.0005)
+            # self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(cloud, frame_id="base"))
             if not cloud.is_empty():
                 cloud.estimate_normals()
                 cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
                 cloud.normalize_normals()
                 (heatmap,_) = get_heatmap(cloud, base_T_camera, self.camera_model, vision_parameters=None)
-                # heatmap = (heatmap - numpy.min(heatmap)) / (numpy.max(heatmap) - numpy.min(heatmap))
                 cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
                 self.voxel_grid.update_grid(cloud)
-            rospy.sleep(0.01)
+            rospy.sleep(0.0001)
+
+# heatmap = (heatmap - numpy.min(heatmap)) / (numpy.max(heatmap) - numpy.min(heatmap))
             
         

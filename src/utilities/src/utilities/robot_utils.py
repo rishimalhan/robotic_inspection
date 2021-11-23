@@ -55,6 +55,7 @@ from moveit_msgs.msg import (
     MotionSequenceResponse,
     MotionPlanRequest
 )
+import time
 from .move_robot import GoToConfiguration
 logger = logging.getLogger('rosout')
 
@@ -70,7 +71,7 @@ class InspectionBot:
         self.scene = PlanningSceneInterface(synchronous=True)
         self.move_group = MoveGroupCommander(self.group_name)
         self.get_fk = GetFK("tool0", "base_link")
-        self.get_ik = GetIK(group=self.group_name, ik_attempts=10, avoid_collisions=True)
+        self.get_ik = GetIK(group=self.group_name, ik_timeout=0.2, ik_attempts=1, avoid_collisions=True)
         # self.trajectory_executor = GoToConfiguration()
         # self.traj_viz = None
 
@@ -169,7 +170,8 @@ class InspectionBot:
         fk = self.get_fk.get_fk(joints)
 
     def execute_joint_path(self,joint_states):
-        for joint_state in joint_states:
+        for i,joint_state in enumerate(joint_states):
+            logger.info("Trajectory point: %d", i+1)
             self.execute( joint_state, vel_scale=0.01 )
         return True
 

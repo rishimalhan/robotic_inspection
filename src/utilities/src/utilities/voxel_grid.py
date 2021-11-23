@@ -29,12 +29,28 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         cloud = open3d.geometry.PointCloud()
         cloud.points = open3d.utility.Vector3dVector(points)
         cloud.colors = open3d.utility.Vector3dVector(numpy.ones(points.shape)*[0,0,1])
-        self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.0005)
+        if self.sim:
+            self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.0015)
+        else:
+            limits = numpy.array([0.01,0.01,0.02])
+            _points = numpy.asarray(cloud.points)
+            cloud.estimate_normals()
+            cloud.normalize_normals()
+            _normals = numpy.asarray(cloud.normals)
+            _new_points = numpy.asarray(cloud.points)
+            for i in range(10):
+                _new_points = numpy.append( _new_points, _points + _normals * numpy.random.uniform(low=-limits,
+                                                                            high=limits, size=(_points.shape[0],3)), axis=0 )
+            cloud = open3d.geometry.PointCloud()
+            cloud.points = open3d.utility.Vector3dVector(_new_points)
+            cloud.colors = open3d.utility.Vector3dVector(numpy.ones(_new_points.shape)*[0,0,1])
+
+            self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.001)
         self.grid_indices = []
         for voxel in self.get_all_voxels():
             self.grid_indices.append(voxel.grid_index)
         self.number_voxels = len(self.grid_indices)
-        self.threshold_obs = 4
+        self.threshold_obs = 1
         self.max_points = self.number_voxels*self.threshold_obs
         self.max_indices = numpy.max(self.grid_indices,axis=0)+1
         self.cg_array = []

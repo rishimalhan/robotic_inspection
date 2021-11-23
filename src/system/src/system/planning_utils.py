@@ -92,16 +92,22 @@ def generate_zigzag(camera_home_,transformer):
 
 def generate_state_space(_cloud, camera_home):
     max_z_angle = 3.14 # radian
-    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.04))
+    _points = numpy.asarray(_cloud.points)
+    _normals = numpy.asarray(_cloud.normals)
+    _points = _points + _normals*0.35
+    _cloud = open3d.geometry.PointCloud()
+    _cloud.points = open3d.utility.Vector3dVector(_points)
+    _cloud.normals = open3d.utility.Vector3dVector(_normals)
+    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.05))
     voxelized_cloud.normalize_normals()
     cloud_normals = numpy.asarray(voxelized_cloud.normals)
 
     points = []
     normals = []
-    points.extend(numpy.asarray(voxelized_cloud.points) + cloud_normals*0.3)
+    points.extend(numpy.asarray(voxelized_cloud.points))
     normals.extend(cloud_normals)
-    points.extend(numpy.asarray(voxelized_cloud.points) + cloud_normals*0.35)
-    normals.extend(cloud_normals)
+    # points.extend(numpy.asarray(voxelized_cloud.points) + cloud_normals*0.05)
+    # normals.extend(cloud_normals)
     points = numpy.array(points)
     normals = numpy.array(normals)
     base_T_camera = state_to_matrix(camera_home)
@@ -125,8 +131,8 @@ def generate_state_space(_cloud, camera_home):
             states.append( numpy.hstack(( point, (point_orientation + [0,roty,0]) )) )
     states = numpy.array(states)
 
-    min_bound = voxelized_cloud.get_min_bound() - [0.1,0.3,0.0]
-    max_bound = voxelized_cloud.get_max_bound() + [0.1,0.3,0.0]
+    min_bound = voxelized_cloud.get_min_bound() - [0.2,0.2,0.0]
+    max_bound = voxelized_cloud.get_max_bound() + [0.2,0.2,0.0]
     invalid_idx = numpy.hstack(( numpy.where( (states[:,0] < min_bound[0]) |  (states[:,1] < min_bound[1]) )[0],
                                 numpy.where( (states[:,0] > max_bound[0]) |  (states[:,1] > max_bound[1]) )[0] ))
     states = numpy.delete(states,invalid_idx,axis=0)

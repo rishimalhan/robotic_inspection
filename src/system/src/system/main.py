@@ -52,7 +52,7 @@ def main():
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
-    
+
     path = get_pkg_path("system")
     plan_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/planned_camera_path.csv"
     inspection_env = InspectionEnv(inspection_bot, camera, sys.argv)
@@ -72,15 +72,19 @@ def main():
     viz.start_visualizer_async()
     
     camera.construct_cloud()
+
+    # For online cloud
     while not rospy.is_shutdown():
         rospy.sleep(0.1)
     online_cloud_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/online.ply"
     open3d.io.write_point_cloud(online_cloud_path, camera.op_cloud)
     sys.exit()
+
     logger.info("Executing the path")
     if joint_states is not None:
         inspection_bot.execute_joint_path(joint_states)
         rospy.sleep(0.2)
+        inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
         logger.info("Inspection complete. Writing pointcloud to file and exiting.")
         constructed_cloud_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/" + rosparam.get_param("/stl_params/name") + ".ply"
         open3d.io.write_point_cloud(constructed_cloud_path, camera.op_cloud)

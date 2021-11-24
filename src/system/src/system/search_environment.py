@@ -63,10 +63,7 @@ class InspectionEnv:
         self.state_zero = numpy.array(self.camera.camera_home)
         (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_zero))
         self.camera.voxel_grid_sim.update_grid(cloud)
-        self.visible_cloud_pub = rospy.Publisher("visible_cloud", PointCloud2, queue_size=10)
-        self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(cloud, frame_id="base"))
         logger.info("Inspection Environment Initialized. Initial coverage: {0}".format(self.camera.voxel_grid_sim.get_coverage()))
-        sys.exit()
 
     def get_children(self, state, query_number):
         (distance,indices) = self.ss_tree.query( state,query_number[1] )
@@ -81,13 +78,16 @@ class InspectionEnv:
             return None
         child_state = None
         rewards = numpy.array([])
-        init_coverage = self.camera.voxel_grid_sim.get_coverage()
         for child in children:
-            (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
-            self.camera.voxel_grid_sim.update_grid(cloud)
-            coverage = self.camera.voxel_grid_sim.get_coverage() - init_coverage
-            self.camera.voxel_grid_sim.devolve_grid(cloud)
-            rate_gain = coverage / numpy.linalg.norm( self.state_space[child]-parent )
+            if child in self.stored_obs:
+                new_obs = self.stored_obs[child]
+            else:
+                (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
+                self.camera.voxel_grid_sim.update_grid(cloud)
+                new_obs = self.camera.voxel_grid_sim.new_obs
+                self.stored_obs[child] = new_obs
+                self.camera.voxel_grid_sim.devolve_grid(cloud)
+            rate_gain = numpy.sum(new_obs) / numpy.linalg.norm( self.state_space[child]-parent )
             rewards = numpy.append( rewards, rate_gain )
         if numpy.any(rewards>0):
             child = children[numpy.argmax(rewards)]
@@ -122,13 +122,13 @@ class InspectionEnv:
             if child_state is not None:
                 coverage = self.camera.voxel_grid_sim.get_coverage()
                 path.append(child_state)
-                if coverage > 0.9:
+                if coverage > 0.98:
                     stopping_condition = True
                 logger.info("Coverage: {0:.2f}. States: Visited: {1}. Remaining: {2}".format(coverage, len(self.visited_states),
                                                             self.state_space.shape[0]-len(self.visited_states)))
             else:
                 stopping_condition = True
-        if coverage > 0.9:
+        if coverage > 0.98:
             logger.info("Solution found with {0} points and {1} coverage"
                             .format(len(path),self.camera.voxel_grid_sim.get_coverage()))
         else:

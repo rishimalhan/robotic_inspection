@@ -109,7 +109,9 @@ class Camera:
             numpy.savetxt(part_tf_path,matrix_to_state(part_transform),delimiter=",")
             part_transform[0:3,3] += rosparam.get_param("/stl_params/compensation")
         else:
-            part_transform = state_to_matrix( numpy.loadtxt(part_tf_path,delimiter=",") )
+            logger.info("Reading the stored part transform")
+            transform = numpy.loadtxt(part_tf_path,delimiter=",")
+            part_transform = state_to_matrix( transform )
             part_transform[0:3,3] += rosparam.get_param("/stl_params/compensation")
             
         ref_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/reference.ply"
@@ -121,13 +123,13 @@ class Camera:
                                 "/" + rosparam.get_param("/stl_params/name") + ".stl"
             logger.info("Reading stl. Path: {0}".format(stl_path))
             self.mesh = open3d.io.read_triangle_mesh(stl_path)
-            logger.info("Stl read. Generating PointCloud from stl")
-            self.mesh = self.mesh.transform(part_transform)
-            
             # Point cloud of STL surface only
+            logger.info("Stl read. Generating PointCloud from stl")
             filters = rospy.get_param("/stl_params").get("filters")
             self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=100000)
             self.stl_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.001)
+            logger.info("Applying transform: \n{0}.".format(part_transform))
+            self.stl_cloud = self.stl_cloud.transform(part_transform)
             if filters is not None:
                 logger.info("Applying filters")
                 dot_products = numpy.asarray(self.stl_cloud.normals)[:,2]
@@ -212,8 +214,8 @@ class Camera:
         # Make the cube bounding box as the field of view
         # Bounding box to crop pointcloud that the camera sees wrt depth optical frame
         axbbox = open3d.geometry.AxisAlignedBoundingBox()
-        axbbox.min_bound = numpy.array([ -0.05, -0.05, 0.25 ])
-        axbbox.max_bound = numpy.array([ 0.05, 0.05, 0.45 ])
+        axbbox.min_bound = numpy.array([ -0.1, -0.1, 0.25 ])
+        axbbox.max_bound = numpy.array([ 0.1, 0.1, 0.45 ])
         fov = open3d.geometry.OrientedBoundingBox().create_from_axis_aligned_bounding_box(axbbox)
         fov.center = base_T_camera[0:3,3] + 0.3*base_T_camera[0:3,2]
         visible_cloud = self.sim_cloud.crop(fov)
@@ -222,7 +224,7 @@ class Camera:
         visible_cloud.estimate_normals()
         visible_cloud.normalize_normals()
         visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
-        
+
         (heatmap,_) = get_heatmap(visible_cloud, base_T_camera, self.camera_model, vision_parameters=None)
         visible_cloud = visible_cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
 

@@ -31,6 +31,7 @@ class Voxel:
 class VoxelGrid(open3d.geometry.VoxelGrid):
     def __init__(self,points,create_from_bounds=False,sim=False):
         self.sim = sim
+        self.output_points = []
         cloud = open3d.geometry.PointCloud()
         cloud.points = open3d.utility.Vector3dVector(points)
         cloud.colors = open3d.utility.Vector3dVector(numpy.ones(points.shape)*[0,0,1])
@@ -81,12 +82,13 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
             index = self.voxel_grid.get_voxel(point)
             
             if not self.sim:
-                if self.number_observations[index[0],index[1],index[2]]==0:
-                    self.voxels[index[0],index[1],index[2]] = Voxel()
-                else:
-                    self.cg_array.remove(self.voxels[index[0],index[1],index[2]].cg)
-                self.voxels[index[0],index[1],index[2]].add_point(point)
-                self.cg_array.append(self.voxels[index[0],index[1],index[2]].cg)
+                # if self.number_observations[index[0],index[1],index[2]]==0:
+                #     self.voxels[index[0],index[1],index[2]] = Voxel()
+                # else:
+                #     self.cg_array.remove(self.voxels[index[0],index[1],index[2]].cg)
+                # self.voxels[index[0],index[1],index[2]].add_point(point)
+                # self.cg_array.append(self.voxels[index[0],index[1],index[2]].cg)
+                self.cg_array.append(point)
             else:
                 self.number_observations[index[0],index[1],index[2]] += 1
                 if self.number_observations[index[0],index[1],index[2]]<=self.threshold_obs:

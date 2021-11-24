@@ -172,7 +172,7 @@ class InspectionBot:
     def execute_joint_path(self,joint_states):
         for i,joint_state in enumerate(joint_states):
             logger.info("Trajectory point: %d", i+1)
-            self.execute( joint_state, vel_scale=0.01 )
+            self.execute( joint_state, vel_scale=0.005 )
         return True
 
 def bootstrap_system(sim_camera=False):

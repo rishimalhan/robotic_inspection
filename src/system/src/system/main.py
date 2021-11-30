@@ -65,7 +65,6 @@ def main():
         numpy.savetxt(plan_path,camera_path,delimiter=",")
     else:
         camera_path = numpy.loadtxt(plan_path,delimiter=",")
-        # camera_path[:,2] += numpy.random.uniform(low=-0.1, high=0.1, size=(camera_path.shape[0],)) # For baseline1
         (exec_path, joint_states) = inspection_env.get_executable_path( camera_path )
     logger.info("Number of points in path: %d",len(exec_path))
 

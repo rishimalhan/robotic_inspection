@@ -275,7 +275,7 @@ class Camera:
             cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
             cloud.normalize_normals()
             (heatmap,_) = get_heatmap(cloud, base_T_camera, self.camera_model, vision_parameters=None)
-            # cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
+            cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
             self.voxel_grid.update_grid(cloud)
 
     def update_cloud(self):
@@ -287,7 +287,7 @@ class Camera:
                 cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
                 cloud.normalize_normals()
                 (heatmap,_) = get_heatmap(cloud, base_T_camera, self.camera_model, vision_parameters=None)
-                # cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
+                cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
                 self.voxel_grid.update_grid(cloud)
             rospy.sleep(0.0001)
 

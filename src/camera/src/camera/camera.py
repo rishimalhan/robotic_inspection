@@ -52,6 +52,10 @@ class SimCameraModel:
 
 class Camera:
     def __init__(self, inspection_bot, transformer, camera_properties, flags):
+        if "sim" in flags:
+            self.simulated_camera = True
+        else:
+            self.simulated_camera = False
         self.empty_cloud = open3d.geometry.PointCloud()
         self.camera_model = SimCameraModel()
         self.camera_properties = camera_properties
@@ -164,6 +168,8 @@ class Camera:
         return (numpy.matmul(base_T_tool0,tool0_T_camera), base_T_tool0, tool0_T_camera)
 
     def trigger_camera(self, filters=True):
+        if self.simulated_camera:
+            return self.get_simulated_cloud()
         # Get the cloud with respect to the base frame
         ros_cloud = rospy.wait_for_message("/camera/depth/color/points",
                                                     PointCloud2,timeout=None)
@@ -208,8 +214,6 @@ class Camera:
     
     def get_simulated_cloud(self, base_T_camera=None):
         visible_cloud = open3d.geometry.PointCloud()
-        if base_T_camera is None:
-            (base_T_camera,_,_) = self.get_current_transform()
         
         # Make the cube bounding box as the field of view
         # Bounding box to crop pointcloud that the camera sees wrt depth optical frame
@@ -217,6 +221,8 @@ class Camera:
         axbbox.min_bound = numpy.array([ -0.1, -0.1, 0.25 ])
         axbbox.max_bound = numpy.array([ 0.1, 0.1, 0.45 ])
         fov = open3d.geometry.OrientedBoundingBox().create_from_axis_aligned_bounding_box(axbbox)
+        if base_T_camera is None:
+            (base_T_camera,_,_) = self.get_current_transform()
         fov.center = base_T_camera[0:3,3] + 0.3*base_T_camera[0:3,2]
         visible_cloud = self.sim_cloud.crop(fov)
         if visible_cloud.is_empty():

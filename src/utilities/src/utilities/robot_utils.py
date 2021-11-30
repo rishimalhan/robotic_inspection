@@ -42,13 +42,6 @@ from trajectory_msgs.msg import (
     JointTrajectoryPoint
 )
 from industrial_msgs.srv import CmdJointTrajectory, CmdJointTrajectoryResponse, CmdJointTrajectoryRequest
-from pilz_robot_programming.robot import (
-    Robot,
-    Sequence,
-)
-from pilz_robot_programming.commands import (
-    Ptp
-)
 from moveit_msgs.msg import (
     MoveGroupSequenceAction,
     MotionSequenceRequest,
@@ -61,8 +54,6 @@ logger = logging.getLogger('rosout')
 
 class InspectionBot:
     def __init__(self, apply_orientation_constraint=False):
-        # __REQUIRED_API_VERSION__ = "1"
-        # self.pilz_robot = Robot(__REQUIRED_API_VERSION__)
         self.goal_position = JointState()
         self.goal_pose = Pose()
         self.goal_position.name = ["joint_"+str(i+1) for i in range(6)]
@@ -72,9 +63,7 @@ class InspectionBot:
         self.move_group = MoveGroupCommander(self.group_name)
         self.get_fk = GetFK("tool0", "base_link")
         self.get_ik = GetIK(group=self.group_name, ik_timeout=0.2, ik_attempts=1, avoid_collisions=True)
-        # self.trajectory_executor = GoToConfiguration()
-        # self.traj_viz = None
-
+        
         if rospy.get_param("/robot_positions/home"):
             self.robot_home = rospy.get_param("/robot_positions/home")
             self.execute_cartesian_path([state_to_pose(self.robot_home)], avoid_collisions=True)

@@ -114,21 +114,14 @@ def generate_state_space(_cloud, camera_home):
     states = []
     
     x_rotations = [-0.3, 0.0, 0.3]
-    # y_rotations = [-0.3, 0.0, 0.3]
-    y_rotations = [0.0]
     for i,point in enumerate(points):
         matrix = numpy.identity(4)
         matrix[0:3,0] = base_T_camera[0:3,0] # Keep x axis of state same as camera
-        # if math.acos(normals[i,2]) > max_z_angle:
-        #     matrix[0:3,2] = base_T_camera[0:3,2]
-        # else:
         matrix[0:3,2] = -normals[i]
         matrix[0:3,1] = numpy.cross(matrix[0:3,2],matrix[0:3,0])
         point_orientation = matrix_to_state(matrix)[3:6]
         for rotx in x_rotations:
             states.append( numpy.hstack(( point, (point_orientation + [rotx,0,0]) )) )
-        for roty in y_rotations:
-            states.append( numpy.hstack(( point, (point_orientation + [0,roty,0]) )) )
     states = numpy.array(states)
 
     min_bound = voxelized_cloud.get_min_bound() - [0.2,0.2,0.0]

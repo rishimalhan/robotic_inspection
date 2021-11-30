@@ -42,7 +42,7 @@ class Visualizer:
                     # Publish an axis using a numpy transform matrix
                     T = transformations.euler_matrix(axis[3],axis[4],axis[5],'rxyz')
                     T[0:3,3] = axis[0:3]
-                    axis_length = 0.01
-                    axis_radius = 0.001
+                    axis_length = 0.02
+                    axis_radius = 0.003
                     self.markers.publishAxis(T, axis_length, axis_radius, 2.0) # pose, axis length, radius, lifetime
-                self.markers.publishPath(path, width=0.001, color='green')
+                self.markers.publishPath(path, width=0.003, color='green')

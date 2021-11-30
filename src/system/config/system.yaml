@@ -15,8 +15,6 @@ stl_params:
   # name: "partA"
   # directory_path: "/database/meshes"
   # compensation: [0.018, -0.017, 0] # Aruco compensation wrt base frame
-  # transform: [ 0.3, 0.8, 0.5, 0.0, 0.0, 1.57 ] # xyzrpy. Only for simulated camera.
-  # color: [0.5, 0.5, 0.5]
   # aruco_frame_name: "fiducial_1"
   # aruco_frame: [0.4, 1.1, 0.707, 3.14, 0, 1.57]
   # filters:
@@ -26,15 +24,15 @@ stl_params:
   # directory_path: "/database/meshes"
   # compensation: [0.023, -0.022, 0.0] # Aruco compensation wrt base frame
   
-  name: "partC"
-  directory_path: "/database/meshes"
-  compensation: [0.024, -0.024, 0.0] # Aruco compensation wrt base frame
-
-  # name: "partD"
+  # name: "partC"
   # directory_path: "/database/meshes"
-  # compensation: [0.02, -0.02, 0.0] # Aruco compensation wrt base frame
-  # filters:
-  #   truncate_below_z: -0.012
+  # compensation: [0.024, -0.024, 0.0] # Aruco compensation wrt base frame
+
+  name: "partD"
+  directory_path: "/database/meshes"
+  compensation: [0.02, -0.02, 0.0] # Aruco compensation wrt base frame
+  filters:
+    truncate_below_z: -0.012
 
 # Collision box
 # position is x, y, z

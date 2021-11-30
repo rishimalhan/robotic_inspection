@@ -30,7 +30,7 @@ from utilities.open3d_and_ros import (
 
 class InspectionEnv:
     def __init__(self, inspection_bot, camera, flags):
-        check_ik = False
+        check_ik = True
         self.inspection_bot = inspection_bot
         self.camera = camera
         self.current_config = self.inspection_bot.move_group.get_current_state().joint_state.position

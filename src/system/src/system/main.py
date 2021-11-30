@@ -47,7 +47,7 @@ def start_camera(inspection_bot,transformer, flags):
     return Camera(inspection_bot,transformer,camera_properties, flags)
 
 def main():
-    save_files = False
+    save_files = True
     rospy.init_node("main")
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
@@ -65,13 +65,14 @@ def main():
         numpy.savetxt(plan_path,camera_path,delimiter=",")
     else:
         camera_path = numpy.loadtxt(plan_path,delimiter=",")
+        # camera_path[:,2] += numpy.random.uniform(low=-0.1, high=0.1, size=(camera_path.shape[0],)) # For baseline1
         (exec_path, joint_states) = inspection_env.get_executable_path( camera_path )
     logger.info("Number of points in path: %d",len(exec_path))
 
     viz = Visualizer()
     viz.axes = exec_path
     viz.start_visualizer_async()
-    
+
     camera.construct_cloud()
 
     # # For online cloud
@@ -83,7 +84,7 @@ def main():
 
     logger.info("Executing the path")
     if joint_states is not None:
-        inspection_bot.execute_joint_path(joint_states)
+        inspection_bot.execute_joint_path(joint_states, camera)
         rospy.sleep(0.2)
         inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
         logger.info("Inspection complete. Writing pointcloud to file and exiting.")

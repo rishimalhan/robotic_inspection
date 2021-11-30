@@ -158,10 +158,10 @@ class InspectionBot:
         IPython.embed()
         fk = self.get_fk.get_fk(joints)
 
-    def execute_joint_path(self,joint_states):
+    def execute_joint_path(self,joint_states,camera):
         for i,joint_state in enumerate(joint_states):
             logger.info("Trajectory point: %d", i+1)
-            self.execute( joint_state, vel_scale=0.005 )
+            self.execute( joint_state, vel_scale=0.01 )
         return True
 
 def bootstrap_system(sim_camera=False):

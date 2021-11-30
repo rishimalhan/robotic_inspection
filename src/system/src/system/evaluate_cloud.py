@@ -16,13 +16,13 @@ from utilities.filesystem_utils import (
 
 gen_ref_cloud = False
 gen_measured_cloud = True
-use_online_cloud = True
+use_online_cloud = False
 save_clouds = True
 
 # part = "partA"
 # part = "partB"
-part = "partC"
-# part = "partD"
+# part = "partC"
+part = "partD"
 
 pkg_path = get_pkg_path("system")
 cloud_path = pkg_path + "/database/" + part + "/" + part + ".ply"
@@ -66,7 +66,7 @@ if gen_measured_cloud:
         matrix[0:3,2] = normals[i]
         matrix[0:3,0] = [1,0,0]
         matrix[0:3,1] = numpy.cross(matrix[0:3,2],matrix[0:3,0])
-        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.0015,0.0015,0.02])
+        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.002,0.002,0.04])
         nugget = numpy.asarray(cloud.crop(bbox).points)
         if nugget.shape[0] > 0:
             averaged_points.append(numpy.average(nugget,axis=0))
@@ -104,6 +104,10 @@ distances = measured_cloud.compute_point_cloud_distance(reference)
 avg = numpy.average(distances)
 stdev = numpy.std(distances)
 logger.info("Max: {0}. Average: {1}".format(avg+2*stdev, numpy.average(distances)))
+
+sys.exit()
+import IPython
+IPython.embed()
 
 from matplotlib import cm
 distances = numpy.subtract(distances,numpy.min(distances))/ (numpy.max(distances-numpy.min(distances)))

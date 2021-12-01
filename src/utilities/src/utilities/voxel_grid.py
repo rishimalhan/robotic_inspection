@@ -38,7 +38,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         if self.sim:
             self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.0015)
         else:
-            limits = numpy.array([0.05,0.05,0.05])
+            limits = numpy.array([0.01,0.01,0.01])
             _points = numpy.asarray(cloud.points)
             cloud.estimate_normals()
             cloud.normalize_normals()

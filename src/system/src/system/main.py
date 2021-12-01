@@ -70,8 +70,8 @@ def main():
 
     viz = Visualizer()
     viz.axes = exec_path
-    viz.start_visualizer_async()
-
+    viz.start_visualizer()
+    sys.exit()
     camera.construct_cloud()
 
     # # For online cloud
@@ -83,7 +83,8 @@ def main():
 
     logger.info("Executing the path")
     if joint_states is not None:
-        inspection_bot.execute_joint_path(joint_states, camera)
+        # inspection_bot.execute_joint_path(joint_states, camera)
+        inspection_bot.execute_cartesian_path( [state_to_pose(tool0_from_camera(camera_state)) for camera_state in camera_path] )
         rospy.sleep(0.2)
         inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
         logger.info("Inspection complete. Writing pointcloud to file and exiting.")

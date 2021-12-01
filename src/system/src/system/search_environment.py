@@ -22,6 +22,7 @@ from utilities.filesystem_utils import (
 logger = logging.getLogger("rosout")
 
 import rospy
+from os.path import exists
 from sensor_msgs.msg import PointCloud2
 from utilities.open3d_and_ros import (
     convertCloudFromOpen3dToRos,
@@ -34,10 +35,12 @@ class InspectionEnv:
         self.inspection_bot = inspection_bot
         self.camera = camera
         self.current_config = self.inspection_bot.move_group.get_current_state().joint_state.position
-        if "plan" in flags:
+        path = get_pkg_path("system")
+        state_space_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/state_space.csv"
+        if exists(state_space_path):
+            self.state_space = numpy.loadtxt(state_space_path,delimiter=",")
+        else:
             self.state_space = generate_state_space(self.camera.stl_cloud, self.camera.camera_home)
-            path = get_pkg_path("system")
-            state_space_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/state_space.csv"
             if check_ik:
                 # Clear out the unreachable states
                 logger.info("State space created. Number of Points: {0}. Removing invalid points.".format(self.state_space.shape[0]))
@@ -54,12 +57,10 @@ class InspectionEnv:
                     else:
                         invalid_indices.append(i)
                 self.state_space = numpy.delete(self.state_space,invalid_indices,axis=0)
-                numpy.savetxt(state_space_path,self.state_space,delimiter=",")
-            else:
-                self.state_space = numpy.loadtxt(state_space_path,delimiter=",")
-            self.ss_tree = KDTree(self.state_space)
-            self.step = 20
-            logger.info("Number of states after filtering. {0}".format(self.state_space.shape[0]))
+            numpy.savetxt(state_space_path,self.state_space,delimiter=",")
+        self.ss_tree = KDTree(self.state_space)
+        self.step = 20
+        logger.info("Number of states after filtering. {0}".format(self.state_space.shape[0]))
         self.state_zero = numpy.array(self.camera.camera_home)
         (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_zero))
         self.camera.voxel_grid_sim.update_grid(cloud)

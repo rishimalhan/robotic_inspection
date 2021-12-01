@@ -218,8 +218,8 @@ class Camera:
         # Make the cube bounding box as the field of view
         # Bounding box to crop pointcloud that the camera sees wrt depth optical frame
         axbbox = open3d.geometry.AxisAlignedBoundingBox()
-        axbbox.min_bound = numpy.array([ -0.1, -0.1, 0.25 ])
-        axbbox.max_bound = numpy.array([ 0.1, 0.1, 0.45 ])
+        axbbox.min_bound = numpy.array([ -0.05, -0.05, 0.25 ])
+        axbbox.max_bound = numpy.array([ 0.05, 0.05, 0.45 ])
         fov = open3d.geometry.OrientedBoundingBox().create_from_axis_aligned_bounding_box(axbbox)
         if base_T_camera is None:
             (base_T_camera,_,_) = self.get_current_transform()

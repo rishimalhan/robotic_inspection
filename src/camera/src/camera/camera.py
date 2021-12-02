@@ -61,7 +61,7 @@ class Camera:
         self.camera_properties = camera_properties
         self.inspection_bot = inspection_bot
         self.transformer = transformer
-        self.heatmap_threshold = 0.3
+        self.heatmap_threshold = 0.5
         path = get_pkg_path("system")
         # Scan the workspace boundary
         self.bbox_path = path + "/database/bbox.csv"
@@ -223,26 +223,17 @@ class Camera:
         fov = open3d.geometry.OrientedBoundingBox().create_from_axis_aligned_bounding_box(axbbox)
         if base_T_camera is None:
             (base_T_camera,_,_) = self.get_current_transform()
+        fov.rotate(base_T_camera[0:3,0:3])
         fov.center = base_T_camera[0:3,3] + 0.3*base_T_camera[0:3,2]
         visible_cloud = self.sim_cloud.crop(fov)
-        if visible_cloud.is_empty():
-            return (visible_cloud,base_T_camera)
-        visible_cloud.estimate_normals()
-        visible_cloud.normalize_normals()
-        visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
 
-        (heatmap,_) = get_heatmap(visible_cloud, base_T_camera, self.camera_model, vision_parameters=None)
-        visible_cloud = visible_cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
-
-        # (heatmap,stddev) = get_heatmap(visible_cloud, base_T_camera, self.camera_model)
-        # from matplotlib import cm
-        # try:
-        #     colormap = cm.jet( numpy.subtract(heatmap,numpy.min(heatmap))/
-        #                                 (numpy.max(heatmap-numpy.min(heatmap))))
-        #     visible_cloud.colors = open3d.utility.Vector3dVector( colormap[:,0:3] )
-        # except:
-        #     logger.warn("Heat map failed to generate.")
-        #     visible_cloud.clear()
+        # if visible_cloud.is_empty():
+        #     return (visible_cloud,base_T_camera)
+        # visible_cloud.estimate_normals()
+        # visible_cloud.normalize_normals()
+        # visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+        # (heatmap,_) = get_heatmap(visible_cloud, base_T_camera, self.camera_model, vision_parameters=None)
+        # visible_cloud = visible_cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
         return (visible_cloud,base_T_camera)
 
     def publish_cloud(self):

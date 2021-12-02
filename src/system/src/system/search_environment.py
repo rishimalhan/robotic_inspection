@@ -1,3 +1,4 @@
+from numpy.lib.financial import rate
 from planning_utils import (
     generate_state_space,
     update_cloud,
@@ -31,6 +32,7 @@ from utilities.open3d_and_ros import (
 
 class InspectionEnv:
     def __init__(self, inspection_bot, camera, flags):
+        self.coverage_threshold = 0.98
         check_ik = True
         self.inspection_bot = inspection_bot
         self.camera = camera
@@ -59,17 +61,18 @@ class InspectionEnv:
                 self.state_space = numpy.delete(self.state_space,invalid_indices,axis=0)
             numpy.savetxt(state_space_path,self.state_space,delimiter=",")
         self.ss_tree = KDTree(self.state_space)
-        self.step = 20
+        self.step = 10
         logger.info("Number of states after filtering. {0}".format(self.state_space.shape[0]))
         self.state_zero = numpy.array(self.camera.camera_home)
         (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_zero))
         self.camera.voxel_grid_sim.update_grid(cloud)
         logger.info("Inspection Environment Initialized. Initial coverage: {0}".format(self.camera.voxel_grid_sim.get_coverage()))
-
+        # self.visible_cloud_pub = rospy.Publisher("visible_cloud", PointCloud2, queue_size=10)
+    
     def get_children(self, state, query_number):
-        (distance,indices) = self.ss_tree.query( state,query_number[1] )
+        (distance,indices) = self.ss_tree.query( state,query_number )
         valid_indices = []
-        for idx in indices[query_number[0]:query_number[1]]:
+        for idx in indices[-self.step:]:
             if idx not in self.visited_states:
                 valid_indices.append(idx)
         return valid_indices
@@ -79,25 +82,29 @@ class InspectionEnv:
             return None
         child_state = None
         rewards = numpy.array([])
+        initial_observations = self.camera.voxel_grid_sim.number_observations
+        initial_coverage = self.camera.voxel_grid_sim.get_coverage()
         for child in children:
+            # Get the observations that can be made from that specific view point
             if child in self.stored_obs:
                 new_obs = self.stored_obs[child]
             else:
                 (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
-                self.camera.voxel_grid_sim.update_grid(cloud)
+                # print(cloud)
+                self.camera.voxel_grid_sim.update_grid(cloud,update_observations=False) # Update to get only the new observations
                 new_obs = self.camera.voxel_grid_sim.new_obs
                 self.stored_obs[child] = new_obs
-                self.camera.voxel_grid_sim.devolve_grid(cloud)
-            rate_gain = numpy.sum(new_obs) / numpy.linalg.norm( self.state_space[child]-parent )
+            coverage = self.camera.voxel_grid_sim.get_coverage(observations=(initial_observations + new_obs)) - initial_coverage
+            rate_gain = coverage / numpy.linalg.norm( self.state_space[child]-parent )
             rewards = numpy.append( rewards, rate_gain )
         if numpy.any(rewards>0):
             child = children[numpy.argmax(rewards)]
             child_state = self.state_space[child]
             (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
             self.camera.voxel_grid_sim.update_grid(cloud)
+            self.visited_states.append(child)
         if numpy.any(rewards<0):
             logger.warn("Rewards are negative. Potential bug")
-        self.visited_states.append(child)
         return child_state
 
     def greedy_search(self):
@@ -107,33 +114,34 @@ class InspectionEnv:
         stopping_condition = False
         logger.info("Planning using greedy search")
         while not stopping_condition:
-            query_number = [0,self.step]
+            query_number = self.step
             child_state = None
             while child_state is None:
                 children = self.get_children(path[-1], query_number)
                 child_state = self.take_action(children, path[-1])
-                if child_state is None and query_number[1] != self.state_space.shape[0]:
-                    query_number[0] += self.step
-                    query_number[1] += self.step
-                    if query_number[1] > self.state_space.shape[0]:
-                        query_number[1] = self.state_space.shape[0]
+                if child_state is None and query_number != self.state_space.shape[0]:
+                    query_number += self.step
+                    if query_number > self.state_space.shape[0]:
+                        query_number = self.state_space.shape[0]
                 else:
                     break
                         
             if child_state is not None:
-                coverage = self.camera.voxel_grid_sim.get_coverage()
+                coverage = self.camera.voxel_grid_sim.get_score()
                 path.append(child_state)
-                if coverage > 0.98:
+                if coverage > self.coverage_threshold:
                     stopping_condition = True
                 logger.info("Coverage: {0:.2f}. States: Visited: {1}. Remaining: {2}".format(coverage, len(self.visited_states),
                                                             self.state_space.shape[0]-len(self.visited_states)))
             else:
                 stopping_condition = True
-        if coverage > 0.98:
+        if coverage > self.coverage_threshold:
             logger.info("Solution found with {0} points and {1} coverage"
-                            .format(len(path),self.camera.voxel_grid_sim.get_coverage()))
+                            .format(len(path),self.camera.voxel_grid_sim.get_score()))
         else:
-            logger.info("Solution found without complete coverage")
+            logger.info("Solution found without complete coverage. Remaining States")
+            logger.info("Coverage: {0:.2f}. States: Visited: {1}. Remaining: {2}. QueryNumber: {3}".format(coverage, len(self.visited_states),
+                                            self.state_space.shape[0]-len(self.visited_states), query_number))
         return numpy.array(path)
     
     def check_ik_validity(self,joints):

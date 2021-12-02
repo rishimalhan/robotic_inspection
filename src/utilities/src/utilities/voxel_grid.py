@@ -38,7 +38,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         if self.sim:
             self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.0015)
         else:
-            limits = numpy.array([0.01,0.01,0.01])
+            limits = numpy.array([0.02,0.02,0.02])
             _points = numpy.asarray(cloud.points)
             cloud.estimate_normals()
             cloud.normalize_normals()
@@ -57,7 +57,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
             self.grid_indices.append(voxel.grid_index)
         self.number_voxels = len(self.grid_indices)
         logger.info("Number of points: {0}. Number of Voxels: {1}.".format(numpy.asarray(cloud.points).shape[0], self.number_voxels))
-        self.threshold_obs = 1
+        self.threshold_obs = 2
         self.max_points = self.number_voxels*self.threshold_obs
         self.max_indices = numpy.max(self.grid_indices,axis=0)+1
         self.cg_array = []
@@ -74,7 +74,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
             index = self.voxel_grid.get_voxel(point)
             self.number_observations[index[0],index[1],index[2]] -= 1
 
-    def update_grid(self,cloud):
+    def update_grid(self,cloud,update_observations=True):
         self.new_obs = numpy.zeros(shape=(self.max_indices[0],
                                     self.max_indices[1],self.max_indices[2]),dtype=int)
         points = self.get_valid_points(cloud)
@@ -90,9 +90,11 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
                 # self.cg_array.append(self.voxels[index[0],index[1],index[2]].cg)
                 self.cg_array.append(point)
             else:
-                self.number_observations[index[0],index[1],index[2]] += 1
-                if self.number_observations[index[0],index[1],index[2]]<=self.threshold_obs:
+                # If this voxel is being newly discovered it's a new observation
+                if self.number_observations[index[0],index[1],index[2]]<self.threshold_obs:
                     self.new_obs[index[0],index[1],index[2]] += 1
+                if update_observations:
+                    self.number_observations[index[0],index[1],index[2]] += 1
     
     def get_cloud(self):
         if len(self.cg_array)>0:
@@ -111,9 +113,17 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
     def voxel_threshold_met(self):
         return numpy.all(self.number_observations==10)
 
-    def get_coverage(self):
+    def get_coverage(self, observations=None):
+        if observations is None:
+            return (numpy.sum(numpy.where(self.number_observations>=1, 1, 0)) / 
+                        self.number_voxels)
+        else:
+            return (numpy.sum(numpy.where(observations>=1, 1, 0)) / 
+                        self.number_voxels)
+    
+    def get_score(self):
         return (numpy.sum(numpy.where(self.number_observations>=self.threshold_obs, 1, 0)) / 
-                            self.number_voxels)
+                    self.number_voxels)
 
     def reset(self):
         self.number_observations = numpy.zeros(shape=(self.max_indices[0],

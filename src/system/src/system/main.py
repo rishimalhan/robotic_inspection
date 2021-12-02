@@ -68,10 +68,10 @@ def main():
         (exec_path, joint_states) = inspection_env.get_executable_path( camera_path )
     logger.info("Number of points in path: %d",len(exec_path))
 
-    viz = Visualizer()
-    viz.axes = exec_path
-    viz.start_visualizer()
-    sys.exit()
+    # viz = Visualizer()
+    # viz.axes = exec_path
+    # viz.start_visualizer_async()
+
     camera.construct_cloud()
 
     # # For online cloud
@@ -84,7 +84,7 @@ def main():
     logger.info("Executing the path")
     if joint_states is not None:
         # inspection_bot.execute_joint_path(joint_states, camera)
-        inspection_bot.execute_cartesian_path( [state_to_pose(tool0_from_camera(camera_state)) for camera_state in camera_path] )
+        inspection_bot.execute_cartesian_path( [state_to_pose(tool0_from_camera(camera_state, transformer)) for camera_state in camera_path],vel_scale=0.05 )
         rospy.sleep(0.2)
         inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
         logger.info("Inspection complete. Writing pointcloud to file and exiting.")

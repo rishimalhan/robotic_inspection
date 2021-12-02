@@ -16,6 +16,11 @@ from tf.transformations import (
 from system.perception_utils import (
     get_heatmap
 )
+from sensor_msgs.msg import PointCloud2
+from utilities.open3d_and_ros import (
+    convertCloudFromOpen3dToRos,
+)
+import sys
 
 def tf_to_state(tf):
     return numpy.hstack(( tf[0],euler_from_quaternion(tf[1],'rxyz') ))
@@ -97,10 +102,9 @@ def generate_state_space(_cloud, camera_home):
     _cloud = open3d.geometry.PointCloud()
     _cloud.points = open3d.utility.Vector3dVector(_points)
     _cloud.normals = open3d.utility.Vector3dVector(_normals)
-    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.04))
+    voxelized_cloud = copy.deepcopy(_cloud.voxel_down_sample(voxel_size=0.06))
     voxelized_cloud.normalize_normals()
     cloud_normals = numpy.asarray(voxelized_cloud.normals)
-
     points = []
     normals = []
     points.extend(numpy.asarray(voxelized_cloud.points))
@@ -114,6 +118,8 @@ def generate_state_space(_cloud, camera_home):
     for i,point in enumerate(points):
         matrix = numpy.identity(4)
         matrix[0:3,0] = base_T_camera[0:3,0] # Keep x axis of state same as camera
+        # Keep one state with vertical camera orientation
+        states.append( numpy.hstack(( point, matrix_to_state(base_T_camera)[3:6] )) )
         matrix[0:3,2] = -normals[i]
         matrix[0:3,1] = numpy.cross(matrix[0:3,2],matrix[0:3,0])
         point_orientation = matrix_to_state(matrix)[3:6]

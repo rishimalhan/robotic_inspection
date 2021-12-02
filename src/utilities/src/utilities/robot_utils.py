@@ -112,8 +112,11 @@ class InspectionBot:
         return config
 
     def execute_cartesian_path(self,waypoints, avoid_collisions=True, async_exec=False, vel_scale=1.0):
-        (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, eef_step=0.01, jump_threshold=0.0, avoid_collisions=avoid_collisions
+        for i in range(10):
+            (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, eef_step=0.01, jump_threshold=0.0, avoid_collisions=avoid_collisions
                                         )
+            if fraction == 1.0:
+                break
         if fraction != 1.0:
             logger.warn("Cartesian planning failure. Only covered {0} fraction of path.".format(fraction))
             return None

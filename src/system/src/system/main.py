@@ -69,8 +69,13 @@ def main():
     logger.info("Number of points in path: %d",len(exec_path))
 
     # viz = Visualizer()
-    # viz.axes = exec_path
-    # viz.start_visualizer_async()
+    # viz.axes = inspection_env.state_space
+    # viz.start_visualizer(path_frames=camera_path)
+    # sys.exit()
+
+    viz = Visualizer()
+    viz.axes = exec_path
+    viz.start_visualizer_async()
 
     camera.construct_cloud()
 

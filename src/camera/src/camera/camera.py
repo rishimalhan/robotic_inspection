@@ -105,7 +105,6 @@ class Camera:
             part_transform = []
             for i in range(100):
                 part_transform.append(tf_to_state(self.transformer.lookupTransform("base", frame_name, rospy.Time(0))))
-            
             part_transform = numpy.average(part_transform,axis=0)
             # Hard coding!
             part_transform[3:6] = [0,0,1.57]
@@ -160,7 +159,7 @@ class Camera:
         self.camera_home = numpy.hstack(( matrix_to_state(part_transform)[0:3] + numpy.array([0,0,0.3]),
                                         current_orientation
                                         ))
-        self.publish_cloud()
+        self.publish_cloud()        
 
     def get_current_transform(self):
         base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
@@ -185,7 +184,10 @@ class Camera:
 
     def localize(self):
         logger.info("Intial value of camera to tool transform: {0}".format(self.localizer_tf))
-        self.plate_tf = tf_to_state(self.transformer.lookupTransform("base", "fiducial_6", rospy.Time(0)))
+        self.plate_tf = []
+        for i in range(100):
+            self.plate_tf.append(tf_to_state(self.transformer.lookupTransform("base", "fiducial_6", rospy.Time(0))))
+        self.plate_tf = numpy.average(self.plate_tf,axis=0)
         # Generate points around the aruco point to execute robot motions
         plate_position = self.plate_tf[0:3] + numpy.array([0,0,0.3])
         (base_T_camera,_,_) = self.get_current_transform()
@@ -256,8 +258,11 @@ class Camera:
     
     def construct_cloud(self):
         logger.info("Starting cloud construction")
-        th = threading.Thread(target=self.update_cloud)
-        th.start()
+        self.th = threading.Thread(target=self.update_cloud)
+        self.th.start()
+
+    def stop_construct(self):
+        self.th.join()
 
     def update_cloud_once(self):
         (cloud,base_T_camera) = self.trigger_camera(filters=False)

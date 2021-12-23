@@ -35,4 +35,4 @@ def get_heatmap(cloud, base_T_camera, model, vision_parameters=None):
         vision_parameters = get_vision_coordinates(cloud,base_T_camera)
     if cloud.is_empty() or vision_parameters is None:
         return (cloud,vision_parameters)
-    return model.predict(vision_parameters)
+    return (vision_parameters,None)

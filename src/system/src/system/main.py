@@ -33,6 +33,14 @@ from search_environment import InspectionEnv
 logger = logging.getLogger('rosout')
 
 
+online_path = numpy.array([ [-0.089, 1.313, 0.601, 2.651, -0.022, -0.100],
+                [-0.088, 1.335, 0.643, 2.651, -0.022, -0.100],
+                [-0.092, 1.267, 0.516, 2.651, -0.022, -0.100],
+                [-0.092, 1.236, 0.611, 2.775, -0.170, -0.014],
+                [0.050, 1.282, 0.550, 2.775, -0.170, -0.014],
+                [-0.043, 1.181, 0.576, 2.899, -0.193, -0.005] ])
+
+
 def start_simulated_camera(inspection_bot, start_publisher):
     path = get_pkg_path("system")
     stl_path = path + rosparam.get_param("/stl_params/directory_path") + \
@@ -52,9 +60,7 @@ def main():
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
     inspection_bot = bootstrap_system()
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
-
-    sys.exit()
-
+    
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
 
     path = get_pkg_path("system")
@@ -71,9 +77,11 @@ def main():
         (exec_path, joint_states) = inspection_env.get_executable_path( camera_path )
     logger.info("Number of points in path: %d",len(exec_path))
 
-    # viz = Visualizer()
-    # viz.axes = exec_path
-    # viz.start_visualizer_async()
+    print( numpy.sum(numpy.linalg.norm(camera_path[1:,0:3]-camera_path[0:-1,0:3],axis=1)) )
+    
+    viz = Visualizer()
+    viz.axes = exec_path
+    viz.start_visualizer_async()
 
     camera.construct_cloud()
 
@@ -83,19 +91,20 @@ def main():
     # online_cloud_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/online.ply"
     # open3d.io.write_point_cloud(online_cloud_path, camera.op_cloud)
     # sys.exit()
+
     logger.info("Executing the path")
     if joint_states is not None:
         # inspection_bot.execute_joint_path(joint_states, camera)
-        inspection_bot.execute_cartesian_path( [state_to_pose(tool0_from_camera(camera_state, transformer)) for camera_state in camera_path],vel_scale=0.05 )
+        inspection_bot.execute_cartesian_path( [state_to_pose(tool0_from_camera(camera_state, transformer)) for camera_state in camera_path],vel_scale=0.01 )
         rospy.sleep(0.2)
         inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
         logger.info("Inspection complete.")
-        # logger.info("Inspection complete. Writing pointcloud to file and exiting.")
-        # constructed_cloud_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/" + rosparam.get_param("/stl_params/name") + ".ply"
-        # if save_files:
-        #     open3d.io.write_point_cloud(constructed_cloud_path, camera.op_cloud)
-        #     rospy.sleep(0.5)
-        #     logger.info("Pointcloud written.")
+        logger.info("Inspection complete. Writing pointcloud to file and exiting.")
+        constructed_cloud_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/" + rosparam.get_param("/stl_params/name") + ".ply"
+        if save_files:
+            open3d.io.write_point_cloud(constructed_cloud_path, camera.op_cloud)
+            rospy.sleep(0.5)
+            logger.info("Pointcloud written.")
     else:
         logger.info("Planning Failure.")
 

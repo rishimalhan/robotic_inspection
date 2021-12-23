@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from numpy.lib.financial import ipmt
 import open3d
 import numpy
 import rosparam
@@ -30,7 +31,8 @@ from system.planning_utils import (
 )
 from camera.camera_localization import Localizer
 from system.perception_utils import (
-    get_heatmap
+    get_heatmap,
+    get_vision_coordinates
 )
 logger = logging.getLogger("rosout")
 
@@ -42,13 +44,13 @@ class SimCameraModel:
         self.max_distance = 0.3
 
     def predict(self,vision_parameters):
-        # We multiply error by z_sigma to bring it to max 1 cm. Error is max 1.0 before that
-        return (numpy.average( numpy.column_stack(
-                    (100*numpy.power(vision_parameters[:,0],2) - 60*vision_parameters[:,0] + 9,
-                    0.01*numpy.exp(9.2*vision_parameters[:,1]),
-                    0.01*numpy.exp(1.466*vision_parameters[:,2]))
-                ),
-                axis=1, weights=numpy.array([0.2,0.2,0.6]) ), numpy.ones(vision_parameters.shape[0],) * self.accuracy_sigma )
+        return numpy.average( vision_parameters,axis=1 )
+        # return (numpy.average( numpy.column_stack(
+        #             (100*numpy.power(vision_parameters[:,0],2) - 60*vision_parameters[:,0] + 9,
+        #             0.01*numpy.exp(9.2*vision_parameters[:,1]),
+        #             0.01*numpy.exp(1.466*vision_parameters[:,2]))
+        #         ),
+        #         axis=1), numpy.ones(vision_parameters.shape[0],) * self.accuracy_sigma )
 
 class Camera:
     def __init__(self, inspection_bot, transformer, camera_properties, flags):
@@ -61,7 +63,9 @@ class Camera:
         self.camera_properties = camera_properties
         self.inspection_bot = inspection_bot
         self.transformer = transformer
-        self.heatmap_threshold = 0.5
+        self.heatmap_threshold = 1.0
+        self.heatmap_bounds = numpy.array([ [0.3,0,0],[0.4,0.3,1.0] ]) # Conservative
+        # self.heatmap_bounds = numpy.array([ [0, 0, 0],[10.0, 6.0, 2.0] ]) # Bad
         path = get_pkg_path("system")
         # Scan the workspace boundary
         self.bbox_path = path + "/database/bbox.csv"
@@ -88,6 +92,10 @@ class Camera:
         self.robot_home = rospy.get_param("/robot_positions/home")
         self.inspection_bot.execute_cartesian_path([state_to_pose(self.robot_home)], avoid_collisions=True)
         self.camera_frame = camera_properties.get("camera_frame")
+
+        if "camera_data" in flags:
+            self.get_camera_parameter_data()
+
         if "localize" in flags:
             self.localizer_tf = tf_to_state(self.transformer.lookupTransform("tool0", self.camera_frame, rospy.Time(0)))
             self.localize()
@@ -150,7 +158,7 @@ class Camera:
             logger.info("Writing reference pointcloud to file")
             open3d.io.write_point_cloud(ref_path, self.stl_cloud)
         # Cloud to be used for simulations
-        self.sim_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.01)
+        self.sim_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.005)
         self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.sim_cloud.points), sim=True)
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points),create_from_bounds=True)
         self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
@@ -161,12 +169,59 @@ class Camera:
                                         ))
         self.publish_cloud()        
 
+    def get_camera_parameter_data(self):
+        self.localizer_tf = numpy.loadtxt(self.tf_path,delimiter=",")
+        self.plate_tf = []
+        for i in range(100):
+            self.plate_tf.append(tf_to_state(self.transformer.lookupTransform("base", "fiducial_6", rospy.Time(0))))
+        self.plate_tf = numpy.average(self.plate_tf,axis=0)
+        # Generate points around the aruco point to execute robot motions
+        plate_position = self.plate_tf[0:3] + numpy.array([0,0,0.35])
+        (base_T_camera,_,_) = self.get_current_transform()
+        camera_orientation = matrix_to_state(base_T_camera)[3:6]
+        frames = [numpy.hstack(( plate_position,camera_orientation ))]
+        # Randomly sample positions
+        for sample in numpy.random.uniform(low=-1, high=1, size=(40,6)):
+            frames.append(frames[0] + numpy.multiply(sample,numpy.array([0.1,0.1,0.1,0.4,0.4,0.4])))
+
+        data = []
+        clouds = []
+        logger.info("Moving robot to localizer frames and capturing data")
+        for i,frame in enumerate(frames):
+            self.inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(frame,self.transformer))])
+            (open3d_cloud, base_T_camera) = self.trigger_camera()
+            open3d_cloud = open3d_cloud.voxel_down_sample(voxel_size=0.001)
+            open3d_cloud = open3d_cloud.remove_statistical_outlier(nb_neighbors=10,std_ratio=5.0)[0]
+            if i==0:
+                first_cloud = open3d_cloud
+                clouds.append(first_cloud)
+                points = numpy.asarray(first_cloud.points)
+                points = numpy.append(points,points+[0,0,0.02],axis=0)
+                points = numpy.append(points,points-[0,0,0.02],axis=0)
+                cloud = open3d.geometry.PointCloud()
+                cloud.points = open3d.utility.Vector3dVector(points)
+                bbox = cloud.get_axis_aligned_bounding_box()
+            if i>0:
+                open3d_cloud = open3d_cloud.crop(bbox)
+                clouds.append(open3d_cloud)
+                if open3d_cloud.is_empty():
+                    continue
+                open3d_cloud.estimate_normals()
+                open3d_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+                open3d_cloud.normalize_normals()
+                distances = numpy.asarray(open3d_cloud.compute_point_cloud_distance(first_cloud))
+                parameters = get_vision_coordinates(open3d_cloud, base_T_camera)
+                data.extend(numpy.column_stack(( parameters, distances )))
+        # open3d.visualization.draw_geometries(clouds)
+        path = get_pkg_path("system")
+        numpy.savetxt(path+"/database/camera_data.csv",data,delimiter=",")
+
     def get_current_transform(self):
         base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
         tool0_T_camera = state_to_matrix(self.localizer_tf)
         return (numpy.matmul(base_T_tool0,tool0_T_camera), base_T_tool0, tool0_T_camera)
 
-    def trigger_camera(self, filters=True):
+    def trigger_camera(self):
         if self.simulated_camera:
             return self.get_simulated_cloud()
         # Get the cloud with respect to the base frame
@@ -176,10 +231,8 @@ class Camera:
         open3d_cloud = convertCloudFromRosToOpen3d(ros_cloud)
         open3d_cloud = open3d_cloud.transform(transform)
         # open3d_cloud = open3d_cloud.crop(self.bbox)
-        if filters:
-            points = numpy.asarray(open3d_cloud.points)
-            distances = numpy.linalg.norm(points-transform[0:3,3],axis=1)
-            open3d_cloud = open3d_cloud.select_by_index( numpy.where( (distances < 0.35) & (distances > 0.25) )[0] )
+        if open3d_cloud.is_empty():
+            self.trigger_camera()
         return (open3d_cloud, transform)
 
     def localize(self):
@@ -235,7 +288,12 @@ class Camera:
         # visible_cloud.normalize_normals()
         # visible_cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
         # (heatmap,_) = get_heatmap(visible_cloud, base_T_camera, self.camera_model, vision_parameters=None)
-        # visible_cloud = visible_cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
+        # logger.info("Min: {0}".format(numpy.min(heatmap,axis=0)))
+        # logger.info("Min: {0}\n".format(numpy.max(heatmap,axis=0)))
+        # indices = numpy.where( (heatmap[:,0]<self.heatmap_threshold[0]) &
+        #                                 (heatmap[:,1]<self.heatmap_threshold[1]) &
+        #                                 (heatmap[:,2]<self.heatmap_threshold[2])   )[0]
+        # visible_cloud = visible_cloud.select_by_index(indices)
         return (visible_cloud,base_T_camera)
 
     def publish_cloud(self):
@@ -265,25 +323,35 @@ class Camera:
         self.th.join()
 
     def update_cloud_once(self):
-        (cloud,base_T_camera) = self.trigger_camera(filters=False)
+        (cloud,base_T_camera) = self.trigger_camera()
         if not cloud.is_empty():
             cloud.estimate_normals()
             cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
             cloud.normalize_normals()
             (heatmap,_) = get_heatmap(cloud, base_T_camera, self.camera_model, vision_parameters=None)
-            cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
+            # cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
             self.voxel_grid.update_grid(cloud)
 
     def update_cloud(self):
         while not rospy.is_shutdown():
-            (cloud,base_T_camera) = self.trigger_camera(filters=False)
+            (cloud,base_T_camera) = self.trigger_camera()
             # self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(cloud, frame_id="base"))
             if not cloud.is_empty():
                 cloud.estimate_normals()
                 cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
                 cloud.normalize_normals()
                 (heatmap,_) = get_heatmap(cloud, base_T_camera, self.camera_model, vision_parameters=None)
-                cloud = cloud.select_by_index(numpy.where(heatmap < self.heatmap_threshold)[0])
+                # logger.info("Min: {0}".format(numpy.min(heatmap,axis=0)))
+                # logger.info("Max: {0}\n".format(numpy.max(heatmap,axis=0)))
+                indices = numpy.unique(numpy.hstack(( 
+                            numpy.where( (heatmap[:,0]>self.heatmap_bounds[0,0]) &
+                                        (heatmap[:,1]>self.heatmap_bounds[0,1]) &
+                                        (heatmap[:,2]>self.heatmap_bounds[0,2])   )[0],
+                            numpy.where( (heatmap[:,0]<self.heatmap_bounds[1,0]) &
+                                        (heatmap[:,1]<self.heatmap_bounds[1,1]) &
+                                        (heatmap[:,2]<self.heatmap_bounds[1,2]) )[0]
+                )))
+                cloud = cloud.select_by_index(indices)
                 self.voxel_grid.update_grid(cloud)
             rospy.sleep(0.0001)
 

@@ -21,8 +21,8 @@ class Voxel:
         if len(self.points)==1:
             self.cg = self.points[0].tolist()
             return
-        if len(self.points)>100:
-            self.points = self.points[-100:]
+        if len(self.points)>10:
+            self.points = self.points[-10:]
 
         # self.points = self.reject_outliers(self.points)
         self.cg = numpy.average(self.points,axis=0).tolist()
@@ -57,7 +57,7 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
             self.grid_indices.append(voxel.grid_index)
         self.number_voxels = len(self.grid_indices)
         logger.info("Number of points: {0}. Number of Voxels: {1}.".format(numpy.asarray(cloud.points).shape[0], self.number_voxels))
-        self.threshold_obs = 2
+        self.threshold_obs = 1
         self.max_points = self.number_voxels*self.threshold_obs
         self.max_indices = numpy.max(self.grid_indices,axis=0)+1
         self.cg_array = []

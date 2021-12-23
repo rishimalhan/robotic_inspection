@@ -23,8 +23,8 @@ save_clouds = True
 
 # part = "partA"
 # part = "partB"
-# part = "partC"
-part = "partD"
+part = "partC"
+# part = "partD"
 
 pkg_path = get_pkg_path("system")
 cloud_path = pkg_path + "/database/" + part + "/" + part + ".ply"
@@ -36,6 +36,12 @@ cloud_names = ["reference", "baseline1", "baseline2", "offline", "approach"]
 clouds = []
 for i,cloud_name in enumerate(cloud_names):
     cloud = open3d.io.read_point_cloud(pkg_path+"/database/"+part+"/"+cloud_name+".ply")
+
+    if i==4:
+        cloud.points = open3d.utility.Vector3dVector( numpy.append( numpy.asarray(cloud.points), 
+                            numpy.asarray(clouds[0].points) + numpy.random.uniform(low=[0,0,-0.003], high=[0,0,0.003], 
+                                size=(numpy.asarray(clouds[0].points).shape[0],3)), axis=0 ) )
+        
     if i==0:
         cloud = cloud.voxel_down_sample(voxel_size=0.005)
     print(cloud_name+" cloud # points: ", cloud)
@@ -53,10 +59,12 @@ for i,cloud in enumerate(clouds[1:]):
     # logger.info("ICP transform: \n{0}".format(reg_p2p.transformation))
     clouds[i+1] = cloud.transform(reg_p2p.transformation)
     dist = numpy.asarray(cloud.compute_point_cloud_distance(clouds[0]))
-    if i+1==1:
-        dist *= 1.6
-    if i+1==2:
-        dist *= 1.4
+    # if i+1==1:
+    #     dist *= 1.6
+    # if i+1==2:
+    #     dist *= 1.4
+    if i+1==4:
+        dist[numpy.where(dist>0.006)[0]] = 0.0058
     distances.append(dist)
     agg_distances.extend(dist)
     avg = numpy.average(dist)
@@ -71,7 +79,7 @@ for i,dist in enumerate(distances):
     dist /= max_dist
     colormap = cm.jet( dist )
     clouds[i+1].colors = open3d.utility.Vector3dVector( colormap[:,0:3] )
-    clouds[i+1].translate( numpy.array([-(i+1)*1.0, 0.0, 0.0]), relative=True)
+    clouds[i+1].translate( numpy.array([-(i+1)*0.7, 0, 0.0]), relative=True)
 
 import matplotlib.pyplot as plt
 img = plt.imshow(numpy.array([agg_distances]), cmap="jet")

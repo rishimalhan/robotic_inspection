@@ -32,7 +32,7 @@ from utilities.open3d_and_ros import (
 
 class InspectionEnv:
     def __init__(self, inspection_bot, camera, flags):
-        self.coverage_threshold = 0.98
+        self.coverage_threshold = 0.85
         check_ik = True
         self.inspection_bot = inspection_bot
         self.camera = camera

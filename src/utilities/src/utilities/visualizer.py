@@ -26,23 +26,40 @@ class Visualizer:
         th = threading.Thread(target=self.start_visualizer)
         th.start()
 
-    def start_visualizer(self):
+    def start_visualizer(self, path_frames=None):
         logger.info("Starting up visualizer.")
+        axis_length = 0.02
+        axis_radius = 0.003
+        path = []
+        if path_frames is not None:
+            for axis in path_frames:
+                if isinstance(axis,Pose):
+                    axis = pose_to_state(axis)
+                point = Point()
+                point.x = axis[0]
+                point.y = axis[1]
+                point.z = axis[2]
+                path.append(point)
+        else:
+            for axis in self.axes:
+                if isinstance(axis,Pose):
+                    axis = pose_to_state(axis)
+                point = Point()
+                point.x = axis[0]
+                point.y = axis[1]
+                point.z = axis[2]
+                path.append(point)
+        if self.axes is not None:
+            axes_list = []
+            for axis in self.axes:
+                if isinstance(axis,Pose):
+                    axis = pose_to_state(axis)
+                # Publish an axis using a numpy transform matrix
+                T = transformations.euler_matrix(axis[3],axis[4],axis[5],'rxyz')
+                T[0:3,3] = axis[0:3]
+                axes_list.append(T)
+
         while not rospy.is_shutdown():
-            if self.axes is not None:
-                path = []
-                for axis in self.axes:
-                    if isinstance(axis,Pose):
-                        axis = pose_to_state(axis)
-                    point = Point()
-                    point.x = axis[0]
-                    point.y = axis[1]
-                    point.z = axis[2]
-                    path.append(point)
-                    # Publish an axis using a numpy transform matrix
-                    T = transformations.euler_matrix(axis[3],axis[4],axis[5],'rxyz')
-                    T[0:3,3] = axis[0:3]
-                    axis_length = 0.02
-                    axis_radius = 0.003
-                    self.markers.publishAxis(T, axis_length, axis_radius, 2.0) # pose, axis length, radius, lifetime
-                self.markers.publishPath(path, width=0.003, color='green')
+            for T in axes_list:
+                self.markers.publishAxis(T, axis_length, axis_radius, 2.0) # pose, axis length, radius, lifetime
+            self.markers.publishPath(path, width=0.003, color='green')

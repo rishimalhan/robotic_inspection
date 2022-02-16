@@ -30,9 +30,6 @@ def get_vision_coordinates(cloud, base_T_camera, angle_points_xaxis=None):
                                 numpy.arccos(-transformed_normals[:,2])    ))
 
 def get_heatmap(cloud, base_T_camera, model, vision_parameters=None):
-    # Average error values for each function is 0.3-1.0. A factor 0.01 is multiplied to convert it to max 5 mm
     if vision_parameters is None:
         vision_parameters = get_vision_coordinates(cloud,base_T_camera)
-    if cloud.is_empty() or vision_parameters is None:
-        return (cloud,vision_parameters)
     return (vision_parameters,None)

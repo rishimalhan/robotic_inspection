@@ -20,9 +20,9 @@ use_online_cloud = False
 save_clouds = True
 
 # part = "partA"
-# part = "partB"
+part = "partB"
 # part = "partC"
-part = "partD"
+# part = "partD"
 
 pkg_path = get_pkg_path("system")
 cloud_path = pkg_path + "/database/" + part + "/" + part + ".ply"
@@ -66,7 +66,7 @@ if gen_measured_cloud:
         matrix[0:3,2] = normals[i]
         matrix[0:3,0] = [1,0,0]
         matrix[0:3,1] = numpy.cross(matrix[0:3,2],matrix[0:3,0])
-        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.002,0.002,0.04])
+        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.002,0.002,0.01])
         nugget = numpy.asarray(cloud.crop(bbox).points)
         if nugget.shape[0] > 0:
             averaged_points.append(numpy.average(nugget,axis=0))

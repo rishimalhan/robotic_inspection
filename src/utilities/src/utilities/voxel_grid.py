@@ -38,13 +38,13 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
         if self.sim:
             self.voxel_grid = self.create_from_point_cloud(cloud, voxel_size=0.0015)
         else:
-            limits = numpy.array([0.02,0.02,0.02])
+            limits = numpy.array([0.04,0.04,0.04])
             _points = numpy.asarray(cloud.points)
             cloud.estimate_normals()
             cloud.normalize_normals()
             _normals = numpy.asarray(cloud.normals)
             _new_points = numpy.asarray(cloud.points)
-            for i in range(10):
+            for i in range(20):
                 _new_points = numpy.append( _new_points, _points + _normals * numpy.random.uniform(low=-limits,
                                                                             high=limits, size=(_points.shape[0],3)), axis=0 )
             cloud = open3d.geometry.PointCloud()
@@ -77,17 +77,13 @@ class VoxelGrid(open3d.geometry.VoxelGrid):
     def update_grid(self,cloud,update_observations=True):
         self.new_obs = numpy.zeros(shape=(self.max_indices[0],
                                     self.max_indices[1],self.max_indices[2]),dtype=int)
+        if cloud.is_empty():
+            return
         points = self.get_valid_points(cloud)
         for point in points:
             index = self.voxel_grid.get_voxel(point)
             
             if not self.sim:
-                # if self.number_observations[index[0],index[1],index[2]]==0:
-                #     self.voxels[index[0],index[1],index[2]] = Voxel()
-                # else:
-                #     self.cg_array.remove(self.voxels[index[0],index[1],index[2]].cg)
-                # self.voxels[index[0],index[1],index[2]].add_point(point)
-                # self.cg_array.append(self.voxels[index[0],index[1],index[2]].cg)
                 self.cg_array.append(point)
             else:
                 # If this voxel is being newly discovered it's a new observation

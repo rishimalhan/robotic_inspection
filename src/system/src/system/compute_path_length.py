@@ -19,7 +19,7 @@ from utilities.visualizer import Visualizer
 rospy.init_node("main")
 path = get_pkg_path("system")
 plan_path = path + "/database/" + rosparam.get_param("/stl_params/name") + "/planned_camera_path.csv"
-plan_path = "/home/rmalhan/extra_results/planned_camera_path.csv"
+plan_path = "/home/rmalhan/robotic_inspection/src/system/database/partF/planned_camera_path.csv"
 camera_path = numpy.loadtxt(plan_path,delimiter=",")
 
 # viz = Visualizer()

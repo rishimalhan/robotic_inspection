@@ -32,7 +32,7 @@ from utilities.open3d_and_ros import (
 
 class InspectionEnv:
     def __init__(self, inspection_bot, camera, flags):
-        self.coverage_threshold = 0.85
+        self.coverage_threshold = 0.95
         check_ik = True
         self.inspection_bot = inspection_bot
         self.camera = camera
@@ -90,7 +90,6 @@ class InspectionEnv:
                 new_obs = self.stored_obs[child]
             else:
                 (cloud,_) = self.camera.get_simulated_cloud(base_T_camera=state_to_matrix(self.state_space[child]))
-                # print(cloud)
                 self.camera.voxel_grid_sim.update_grid(cloud,update_observations=False) # Update to get only the new observations
                 new_obs = self.camera.voxel_grid_sim.new_obs
                 self.stored_obs[child] = new_obs

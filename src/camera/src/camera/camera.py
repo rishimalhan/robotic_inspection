@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from telnetlib import IP
 from numpy.lib.financial import ipmt
 import open3d
 import numpy
@@ -47,9 +48,8 @@ class Camera:
         self.camera_properties = camera_properties
         self.inspection_bot = inspection_bot
         self.transformer = transformer
-        self.heatmap_threshold = 1.0
-        self.heatmap_bounds = numpy.array([ [0.28,0,0],[0.38,0.15,1.0] ]) # Conservative
-        # self.heatmap_bounds = numpy.array([ [0, 0, 0],[10.0, 6.0, 2.0] ]) # Bad
+        self.heatmap_bounds = numpy.array([ [0.27,0,0],[0.39,0.2,1.0] ]) # Conservative
+        # self.heatmap_bounds = numpy.array([ [0,0,0],[10,10,3.14] ]) # Bad
         path = get_pkg_path("system")
         # Scan the workspace boundary
         self.bbox_path = path + "/database/bbox.csv"
@@ -120,11 +120,11 @@ class Camera:
             self.mesh = open3d.io.read_triangle_mesh(stl_path)
             # Point cloud of STL surface only
             logger.info("Stl read. Generating PointCloud from stl")
-            filters = rospy.get_param("/stl_params").get("filters")
             self.stl_cloud = self.mesh.sample_points_poisson_disk(number_of_points=100000)
             self.stl_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.001)
             logger.info("Applying transform: \n{0}.".format(part_transform))
             self.stl_cloud = self.stl_cloud.transform(part_transform)
+            filters = rospy.get_param("/stl_params").get("filters")
             if filters is not None:
                 logger.info("Applying filters")
                 dot_products = numpy.asarray(self.stl_cloud.normals)[:,2]
@@ -138,11 +138,11 @@ class Camera:
                     logger.info("Allowed Z values filter")
                     surface_indices = numpy.where( numpy.asarray(self.stl_cloud.points)[:,2] >= part_transform[2,3]+filters.get("truncate_below_z") )[0]
                     self.stl_cloud = self.stl_cloud.select_by_index(surface_indices)
-
             logger.info("Writing reference pointcloud to file")
             open3d.io.write_point_cloud(ref_path, self.stl_cloud)
+            
         # Cloud to be used for simulations
-        self.sim_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.005)
+        self.sim_cloud = self.stl_cloud.voxel_down_sample(voxel_size=0.003)
         self.voxel_grid_sim = VoxelGrid(numpy.asarray(self.sim_cloud.points), sim=True)
         self.voxel_grid = VoxelGrid(numpy.asarray(self.stl_cloud.points),create_from_bounds=True)
         self.stl_kdtree = open3d.geometry.KDTreeFlann(self.stl_cloud)
@@ -200,6 +200,23 @@ class Camera:
         path = get_pkg_path("system")
         numpy.savetxt(path+"/database/camera_data.csv",data,delimiter=",")
 
+    # def get_error_map(self):
+    #     (open3d_cloud, transform) = self.trigger_camera()
+    #     open3d_cloud.estimate_normals()
+    #     open3d_cloud.orient_normals_towards_camera_location(camera_location=transform[0:3,3])
+    #     open3d_cloud.normalize_normals()
+    #     (heatmap,_) = get_heatmap(open3d_cloud, transform, None, vision_parameters=None)
+    #     for i in [0,1,2]:
+    #         heatmap[:,i] = numpy.subtract(heatmap[:,i],numpy.min(heatmap[:,i])) / (numpy.max(heatmap[:,i]-numpy.min(heatmap[:,i])))
+    #     color_code = numpy.average( heatmap, axis=1 )
+    #     val = numpy.average(color_code)
+    #     open3d_cloud = open3d_cloud.select_by_index( numpy.where(color_code<val)[0] )
+    #     color_code = color_code[numpy.where(color_code<val)[0]]
+    #     from matplotlib import cm
+    #     colormap = cm.jet( color_code*2 )
+    #     open3d_cloud.colors = open3d.utility.Vector3dVector( colormap[:,0:3] )
+    #     self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(open3d_cloud, frame_id="base"))
+        
     def get_current_transform(self):
         base_T_tool0 = self.inspection_bot.get_current_forward_kinematics()
         tool0_T_camera = state_to_matrix(self.localizer_tf)
@@ -217,6 +234,22 @@ class Camera:
         if open3d_cloud.is_empty():
             self.trigger_camera()
         return (open3d_cloud, transform)
+
+    def filter_cloud(self,cloud,base_T_camera):
+        cloud.estimate_normals()
+        cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
+        cloud.normalize_normals()
+        (heatmap,_) = get_heatmap(cloud, base_T_camera, None, vision_parameters=None)
+        # logger.info("Min: {0}".format(numpy.min(heatmap,axis=0)))
+        # logger.info("Max: {0}\n".format(numpy.max(heatmap,axis=0)))
+        indices = numpy.where( (heatmap[:,0]>self.heatmap_bounds[0,0]) &
+                                (heatmap[:,1]>self.heatmap_bounds[0,1]) &
+                                (heatmap[:,2]>self.heatmap_bounds[0,2]) &
+                                (heatmap[:,0]<self.heatmap_bounds[1,0]) &
+                                (heatmap[:,1]<self.heatmap_bounds[1,1]) &
+                                (heatmap[:,2]<self.heatmap_bounds[1,2]) )[0]
+        cloud = cloud.select_by_index(indices)
+        return cloud
 
     def localize(self):
         logger.info("Intial value of camera to tool transform: {0}".format(self.localizer_tf))
@@ -239,6 +272,7 @@ class Camera:
         for frame in frames:
             self.inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(frame,self.transformer))])
             (open3d_cloud, base_T_camera) = self.trigger_camera()
+            open3d_cloud = self.admittance_func(open3d_cloud,base_T_camera)
             open3d_cloud = open3d_cloud.voxel_down_sample(voxel_size=0.01)
             open3d_cloud = open3d_cloud.remove_statistical_outlier(nb_neighbors=10,std_ratio=5.0)[0]
             open3d_cloud = open3d_cloud.transform(numpy.linalg.inv(base_T_camera))
@@ -264,6 +298,8 @@ class Camera:
         fov.rotate(base_T_camera[0:3,0:3])
         fov.center = base_T_camera[0:3,3] + 0.3*base_T_camera[0:3,2]
         visible_cloud = self.sim_cloud.crop(fov)
+        if not visible_cloud.is_empty():
+            visible_cloud = self.filter_cloud(visible_cloud,base_T_camera)
         return (visible_cloud,base_T_camera)
 
     def publish_cloud(self):
@@ -279,6 +315,8 @@ class Camera:
             self.stl_cloud_pub.publish(convertCloudFromOpen3dToRos(self.stl_cloud, frame_id="base"))
             self.op_cloud = self.voxel_grid.get_cloud()
             self.constructed_cloud.publish(convertCloudFromOpen3dToRos(self.op_cloud, frame_id="base"))
+            # (cloud,base_T_camera) = self.trigger_camera() # Cloud wrt robot base
+            # self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(cloud, frame_id="base"))
             rospy.sleep(0.1)
     
     def construct_cloud(self):
@@ -292,17 +330,7 @@ class Camera:
     def update_cloud_once(self):
         (cloud,base_T_camera) = self.trigger_camera()
         if not cloud.is_empty():
-            cloud.estimate_normals()
-            cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
-            cloud.normalize_normals()
-            (heatmap,_) = get_heatmap(cloud, base_T_camera, None, vision_parameters=None)
-            indices = numpy.where( (heatmap[:,0]>self.heatmap_bounds[0,0]) &
-                                    (heatmap[:,1]>self.heatmap_bounds[0,1]) &
-                                    (heatmap[:,2]>self.heatmap_bounds[0,2]) &
-                                    (heatmap[:,0]<self.heatmap_bounds[1,0]) &
-                                    (heatmap[:,1]<self.heatmap_bounds[1,1]) &
-                                    (heatmap[:,2]<self.heatmap_bounds[1,2]) )[0]
-            cloud = cloud.select_by_index(indices)
+            cloud = self.filter_cloud(cloud,base_T_camera)
             if not cloud.is_empty():
                 self.voxel_grid.update_grid(cloud)
 
@@ -311,19 +339,7 @@ class Camera:
             (cloud,base_T_camera) = self.trigger_camera()
             # self.visible_cloud_pub.publish(convertCloudFromOpen3dToRos(cloud, frame_id="base"))
             if not cloud.is_empty():
-                cloud.estimate_normals()
-                cloud.orient_normals_towards_camera_location(camera_location=base_T_camera[0:3,3])
-                cloud.normalize_normals()
-                (heatmap,_) = get_heatmap(cloud, base_T_camera, None, vision_parameters=None)
-                # logger.info("Min: {0}".format(numpy.min(heatmap,axis=0)))
-                # logger.info("Max: {0}\n".format(numpy.max(heatmap,axis=0)))
-                indices = numpy.where( (heatmap[:,0]>self.heatmap_bounds[0,0]) &
-                                        (heatmap[:,1]>self.heatmap_bounds[0,1]) &
-                                        (heatmap[:,2]>self.heatmap_bounds[0,2]) &
-                                        (heatmap[:,0]<self.heatmap_bounds[1,0]) &
-                                        (heatmap[:,1]<self.heatmap_bounds[1,1]) &
-                                        (heatmap[:,2]<self.heatmap_bounds[1,2]) )[0]
-                cloud = cloud.select_by_index(indices)
+                cloud = self.filter_cloud(cloud,base_T_camera)
                 if not cloud.is_empty():
                     self.voxel_grid.update_grid(cloud)
             rospy.sleep(0.0001)            

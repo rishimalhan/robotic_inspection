@@ -14,15 +14,43 @@ from utilities.filesystem_utils import (
     get_pkg_path,
 )
 
+
+def ICP(source, target):
+    seed = numpy.identity(4)
+    for i in range(20):
+        reg_p2p = open3d.pipelines.registration.registration_icp(
+            source=source.voxel_down_sample(voxel_size=0.001), target=target, max_correspondence_distance=2e-1, init=seed)
+        seed = reg_p2p.transformation
+    return reg_p2p.transformation
+
+# numpy.median is rather slow, let's build our own instead
+def median(x):
+    m,n = x.shape
+    middle = numpy.arange((m-1)>>1,(m>>1)+1)
+    x = numpy.partition(x,middle,axis=0)
+    return x[middle].mean(axis=0)
+
+# main function
+def remove_outliers(data,thresh=2.0):           
+    m = median(data)                            
+    s = numpy.abs(data-m)                          
+    return data[(s<median(s)*thresh).all(axis=1)]
+
+
+
 gen_ref_cloud = False
 gen_measured_cloud = True
-use_online_cloud = False
+use_online_cloud = True
 save_clouds = True
+
+max_points = 10000
 
 # part = "partA"
 part = "partB"
 # part = "partC"
 # part = "partD"
+# part = "partE"
+# part = "partF"
 
 pkg_path = get_pkg_path("system")
 cloud_path = pkg_path + "/database/" + part + "/" + part + ".ply"
@@ -32,8 +60,8 @@ part_tf = numpy.loadtxt(part_tf_file,delimiter=",")
 
 # Read the reference cloud
 reference = open3d.io.read_point_cloud(pkg_path+"/database/"+part+"/"+"reference.ply")
-reference = reference.voxel_down_sample(voxel_size=0.005)
 print("Reference cloud # points: ", reference)
+
 
 if gen_measured_cloud:
     cloud = open3d.io.read_point_cloud(cloud_path)
@@ -47,12 +75,7 @@ if gen_measured_cloud:
                         numpy.ones(numpy.asarray(cloud.points).shape)*[0.447,0.62,0.811])
         print("Cloud after online merging # points: ", cloud)
     # ICP
-    reg_p2p = open3d.pipelines.registration.registration_icp(
-        source=cloud.voxel_down_sample(voxel_size=0.005), target=reference, max_correspondence_distance=1e-3, init=numpy.identity(4))
-    logger.info("ICP transform: \n{0}".format(reg_p2p.transformation))
-    cloud = cloud.voxel_down_sample(voxel_size=0.0005)
-    print("Cloud after down sampling # points: ", cloud)
-    cloud = cloud.transform(reg_p2p.transformation)
+    cloud = cloud.transform( ICP(cloud,reference) )
 
     # Apply uncertainty average to the points
     cloud.estimate_normals()
@@ -61,15 +84,25 @@ if gen_measured_cloud:
     normals = numpy.asarray(reference.normals)
     averaged_points = []
     logger.info("Generating the measured cloud")
-    for i in range(points.shape[0]):
+    samples = numpy.random.choice( numpy.arange(0,points.shape[0]), size=(points.shape[0],), replace=False)
+    itr = 0
+    for i in samples:
         matrix = numpy.identity(4)
         matrix[0:3,2] = normals[i]
         matrix[0:3,0] = [1,0,0]
         matrix[0:3,1] = numpy.cross(matrix[0:3,2],matrix[0:3,0])
-        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.002,0.002,0.01])
-        nugget = numpy.asarray(cloud.crop(bbox).points)
-        if nugget.shape[0] > 0:
-            averaged_points.append(numpy.average(nugget,axis=0))
+        bbox = open3d.geometry.OrientedBoundingBox(center=points[i], R=matrix[0:3,0:3], extent=[0.0015,0.0015,0.02])
+        data = numpy.asarray(cloud.crop(bbox).points)
+        if data.shape[0] < 2:
+            continue
+        else:
+            nugget = remove_outliers(data)
+        if nugget.shape[0] == 0:
+            continue
+        averaged_points.append(numpy.average(nugget,axis=0))
+        itr += 1
+        if itr > max_points:
+            break
     averaged_points = numpy.array(averaged_points)
     measured_cloud = open3d.geometry.PointCloud()
     measured_cloud.points = open3d.utility.Vector3dVector(averaged_points)
@@ -93,10 +126,7 @@ print("Measured cloud # points: ", measured_cloud)
 logger.info("ICP")
 # Generate color map
 # ICP
-reg_p2p = open3d.pipelines.registration.registration_icp(
-    source=measured_cloud, target=reference, max_correspondence_distance=1e-3, init=numpy.identity(4))
-logger.info("ICP transform: \n{0}".format(reg_p2p.transformation))
-measured_cloud = measured_cloud.transform(reg_p2p.transformation)
+measured_cloud = measured_cloud.transform( ICP(measured_cloud,reference) )
 
 logger.info("Computing the metrics")
 # Get distance map

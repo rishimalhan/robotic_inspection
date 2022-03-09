@@ -98,7 +98,7 @@ def generate_zigzag(camera_home_,transformer):
 def generate_state_space(_cloud, camera_home):
     _points = numpy.asarray(_cloud.points)
     _normals = numpy.asarray(_cloud.normals)
-    _points = _points + _normals*0.35
+    _points = _points + _normals*0.3
     _cloud = open3d.geometry.PointCloud()
     _cloud.points = open3d.utility.Vector3dVector(_points)
     _cloud.normals = open3d.utility.Vector3dVector(_normals)

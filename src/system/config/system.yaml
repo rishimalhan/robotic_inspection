@@ -34,6 +34,14 @@ stl_params:
   # filters:
   #   truncate_below_z: -0.012
 
+  # name: "partE"
+  # directory_path: "/database/meshes"
+  # compensation: [0.023, -0.022, 0.0] # Aruco compensation wrt base frame
+
+  # name: "partF"
+  # directory_path: "/database/meshes"
+  # compensation: [0.023, -0.022, 0.0] # Aruco compensation wrt base frame
+
 # Collision box
 # position is x, y, z
 # orientation q: x, y, z, w
@@ -62,7 +70,7 @@ collision_boxes:
   left_wall:
     name: "left_wall"
     frame_id: "base_link"
-    position: [0.0, 1.5, 0.0]
+    position: [0.0, 1.6, 0.0]
     orientation: [0.0, 0.0, 0.0, 1.0]
     dimension: [5.0, 0.01, 5.0]
   

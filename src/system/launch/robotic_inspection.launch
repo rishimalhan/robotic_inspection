@@ -56,7 +56,7 @@
     <include file="$(find abb_irb2600_12_165_moveit_config)/launch/default_warehouse_db.launch" if="$(arg db)">
     <arg name="moveit_warehouse_database_path" value="$(arg db_path)"/>
     </include>
-
+    <!-- Everything above is moveit launching. Rishi added below for cameras-->>
     <node name="add_collision_objects" pkg="system" type="add_collision_objects.py"/>
 
     <include file="$(find realsense2_camera)/launch/rs_camera.launch">

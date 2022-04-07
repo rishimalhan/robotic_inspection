@@ -57,7 +57,7 @@ class InspectionBot:
         self.goal_position = JointState()
         self.goal_pose = Pose()
         self.goal_position.name = ["joint_"+str(i+1) for i in range(6)]
-        self.group_name = "manipulator"
+        self.group_name = "manipulator" # Group in movit is a list of motor axis. normally for us just a full arm.
         self.robot = RobotCommander()
         self.scene = PlanningSceneInterface(synchronous=True)
         self.move_group = MoveGroupCommander(self.group_name)
@@ -112,6 +112,9 @@ class InspectionBot:
         return config
 
     def execute_cartesian_path(self,waypoints, avoid_collisions=True, async_exec=False, vel_scale=1.0):
+        # avoid_collisions looks for walls in system.yaml
+        # add_collision_objects.py add these.
+        # Rishi normally used 0.1 for vel_scale on inspection
         for i in range(10):
             (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, eef_step=0.01, jump_threshold=0.0, avoid_collisions=avoid_collisions
                                         )

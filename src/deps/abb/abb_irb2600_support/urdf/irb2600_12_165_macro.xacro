@@ -112,7 +112,7 @@
       </collision>
     </link>
 
-    <!-- Joints -->
+    <!-- Joints - Rishi modified axis 1 (maybe axis 3 also) of abb so it doesn't swing around-->
     <joint name="${prefix}joint_1" type="revolute">
       <origin xyz="0 0 0.445" rpy="0 0 0" />
       <parent link="${prefix}base_link" />

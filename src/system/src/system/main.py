@@ -59,7 +59,7 @@ def main():
     save_files = True
     rospy.init_node("main")
     transformer = tf.TransformListener(True, rospy.Duration(10.0))
-    inspection_bot = bootstrap_system()
+    inspection_bot = bootstrap_system() # I need this.
     camera = start_camera(inspection_bot,transformer=transformer, flags=sys.argv)
     
     inspection_bot.execute_cartesian_path([state_to_pose(tool0_from_camera(camera.camera_home, transformer))])
@@ -89,6 +89,8 @@ def main():
 
     # camera_path = camera_path[0:-40]
     inspection_bot.execute_cartesian_path( [state_to_pose(tool0_from_camera(camera_state, transformer)) for camera_state in camera_path],vel_scale=0.02 )
+    # tool0_from_camera is if the path should be on end effector. URDF tool 0 is for moveit
+    # csv file of path: 100 points per meter? ish. alpha beta gamma. 
     camera.heatmap_bounds = numpy.array([ [0,0,0],[1.0,1.0,3.14] ])
     camera_path = numpy.array([ [0.093, 1.072, 0.585, 3.107, -0.043, -0.099],
                         [0.154, 1.359, 0.472, 2.350, 0.121, -0.220],
